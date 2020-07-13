@@ -19,7 +19,7 @@ fn input_struct() -> Twitter {
 fn bench_deserialize_knocknoc(b: &mut Bencher) {
     let j = input_json();
     b.iter(|| {
-        knocknoc::json::from_str::<Twitter>(&j).unwrap();
+        knocknoc::json::from_str::<Twitter>(&j, None).unwrap();
     });
 }
 
@@ -35,7 +35,7 @@ fn bench_deserialize_serdejson(b: &mut Bencher) {
 fn bench_serialize_knocknoc(b: &mut Bencher) {
     let s = input_struct();
     b.iter(|| {
-        knocknoc::json::to_string(&s);
+        knocknoc::json::to_string(&s, None);
     });
 }
 

@@ -44,7 +44,7 @@ fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenStrea
         #[allow(non_upper_case_globals)]
         const #dummy: () = {
             impl #impl_generics knocknoc::Serialize for #ident #ty_generics #bounded_where_clause {
-                fn begin(&self) -> knocknoc::ser::Fragment {
+                fn begin(&self, context: Option<&dyn knocknoc::ser::Context>) -> knocknoc::ser::Fragment {
                     knocknoc::ser::Fragment::Map(knocknoc::export::Box::new(__Map {
                         data: self,
                         state: 0,
@@ -111,7 +111,7 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenStrea
         #[allow(non_upper_case_globals)]
         const #dummy: () = {
             impl knocknoc::Serialize for #ident {
-                fn begin(&self) -> knocknoc::ser::Fragment {
+                fn begin(&self, context: Option<&dyn knocknoc::ser::Context>) -> knocknoc::ser::Fragment {
                     match self {
                         #(
                             #ident::#var_idents => {

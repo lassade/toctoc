@@ -11,3 +11,6 @@ mod help {
     pub type Str = str;
     pub type Usize = usize;
 }
+
+pub type Asset = (std::sync::Arc<u32>, std::any::TypeId, u32);
+pub type Entity = (u32, u32);

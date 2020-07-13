@@ -89,6 +89,7 @@
 mod impls;
 
 use std::borrow::Cow;
+use crate::export::{Asset, Entity};
 
 /// One unit of output produced during serialization.
 ///
@@ -115,7 +116,7 @@ pub enum Fragment<'a> {
 ///
 /// [Refer to the module documentation for examples.][::ser]
 pub trait Serialize {
-    fn begin(&self) -> Fragment;
+    fn begin(&self, context: Option<&dyn Context>) -> Fragment;
 }
 
 /// Trait that can iterate elements of a sequence.
@@ -130,4 +131,18 @@ pub trait Seq {
 /// [Refer to the module documentation for examples.][::ser]
 pub trait Map {
     fn next(&mut self) -> Option<(Cow<str>, &dyn Serialize)>;
+}
+
+/// Trait that can translate complex types based on some context
+/// into serializable fragments
+pub trait Context {
+    fn entity(&self, e: Entity) -> Fragment {
+        let _ = e;
+        Fragment::Null
+    }
+
+    fn asset(&self, a: Asset) -> Fragment {
+        let _ = a;
+        Fragment::Null
+    }
 }

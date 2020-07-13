@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::ser::{Fragment, Map, Seq, Serialize};
+use crate::ser::{Fragment, Map, Seq, Serialize, Context};
 
 /// Serialize any serializable type into a JSON string.
 ///
@@ -19,12 +19,12 @@ use crate::ser::{Fragment, Map, Seq, Serialize};
 ///         message: "reminiscent of Serde".to_owned(),
 ///     };
 ///
-///     let j = json::to_string(&example);
+///     let j = json::to_string(&example, None);
 ///     println!("{}", j);
 /// }
 /// ```
-pub fn to_string<T: ?Sized + Serialize>(value: &T) -> String {
-    to_string_impl(&value)
+pub fn to_string<T: ?Sized + Serialize>(value: &T, context: Option<&dyn Context>) -> String {
+    to_string_impl(&value, context)
 }
 
 struct Serializer<'a> {
@@ -45,10 +45,10 @@ impl<'a> Drop for Serializer<'a> {
     }
 }
 
-fn to_string_impl(value: &dyn Serialize) -> String {
+fn to_string_impl(value: &dyn Serialize, context: Option<&dyn Context>) -> String {
     let mut out = String::new();
     let mut serializer = Serializer { stack: Vec::new() };
-    let mut fragment = value.begin();
+    let mut fragment = value.begin(context);
 
     loop {
         match fragment {
@@ -70,7 +70,7 @@ fn to_string_impl(value: &dyn Serialize) -> String {
                 match careful!(seq.next() as Option<&dyn Serialize>) {
                     Some(first) => {
                         serializer.stack.push(Layer::Seq(seq));
-                        fragment = first.begin();
+                        fragment = first.begin(context);
                         continue;
                     }
                     None => out.push(']'),
@@ -84,7 +84,7 @@ fn to_string_impl(value: &dyn Serialize) -> String {
                         escape_str(&key, &mut out);
                         out.push(':');
                         serializer.stack.push(Layer::Map(map));
-                        fragment = first.begin();
+                        fragment = first.begin(context);
                         continue;
                     }
                     None => out.push('}'),
@@ -113,7 +113,7 @@ fn to_string_impl(value: &dyn Serialize) -> String {
                     match careful!(seq.next() as Option<&dyn Serialize>) {
                         Some(next) => {
                             out.push(',');
-                            fragment = next.begin();
+                            fragment = next.begin(context);
                             break;
                         }
                         None => out.push(']'),
@@ -126,7 +126,7 @@ fn to_string_impl(value: &dyn Serialize) -> String {
                             out.push(',');
                             escape_str(&key, &mut out);
                             out.push(':');
-                            fragment = next.begin();
+                            fragment = next.begin(context);
                             break;
                         }
                         None => out.push('}'),

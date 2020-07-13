@@ -1,8 +1,9 @@
-Knocknoc (knocknoc fork)
+Knocknoc (miniserde fork)
 =========
 
-*Fork adds support for enumeration, binary serialization, stateful
-(de)serialization and deserializing into structs*
+*Fork adds support for enumerations, binary serialization, stateful
+or contextual (de)serialization, deserializing into structs and optional
+[simd_json](https://crates.io/crates/simd-json) integration*
 
 Prototype of a data structure serialization library with several opposite
 design goals from [Serde](https://serde.rs).

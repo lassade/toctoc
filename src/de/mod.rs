@@ -185,6 +185,7 @@
 mod impls;
 
 use crate::error::{Error, Result};
+use crate::export::{Asset, Entity};
 
 /// Trait for data structures that can be deserialized from a JSON string.
 ///
@@ -217,11 +218,13 @@ pub trait Deserialize: Sized {
     }
 }
 
+// * MOD Added some optional contex to certain types of objects
 /// Trait that can write data into an output place.
 ///
 /// [Refer to the module documentation for examples.][::de]
 pub trait Visitor {
-    fn null(&mut self) -> Result<()> {
+    fn null(&mut self, context: &mut Option<&mut dyn Context>) -> Result<()> {
+        let _ = context;
         Err(Error)
     }
 
@@ -230,17 +233,20 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn string(&mut self, s: &str) -> Result<()> {
+    fn string(&mut self, s: &str, context: &mut Option<&mut dyn Context>) -> Result<()> {
+        let _ = context;
         let _ = s;
         Err(Error)
     }
 
-    fn negative(&mut self, n: i64) -> Result<()> {
+    fn negative(&mut self, n: i64, context: &mut Option<&mut dyn Context>) -> Result<()> {
+        let _ = context;
         let _ = n;
         Err(Error)
     }
 
-    fn nonnegative(&mut self, n: u64) -> Result<()> {
+    fn nonnegative(&mut self, n: u64, context: &mut Option<&mut dyn Context>) -> Result<()> {
+        let _ = context;
         let _ = n;
         Err(Error)
     }
@@ -250,11 +256,13 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn seq(&mut self) -> Result<Box<dyn Seq + '_>> {
+    fn seq(&mut self, context: &mut Option<&mut dyn Context>) -> Result<Box<dyn Seq + '_>> {
+        let _ = context;
         Err(Error)
     }
-
-    fn map(&mut self) -> Result<Box<dyn Map + '_>> {
+    
+    fn map(&mut self, context: &mut Option<&mut dyn Context>) -> Result<Box<dyn Map + '_>> {
+        let _ = context;
         Err(Error)
     }
 
@@ -264,7 +272,8 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn bytes(&mut self, b: &[u8]) -> Result<()> {
+    fn bytes(&mut self, b: &[u8], context: &mut Option<&mut dyn Context>) -> Result<()> {
+        let _ = context;
         let _ = b;
         Err(Error)
     }
@@ -284,4 +293,24 @@ pub trait Seq {
 pub trait Map {
     fn key(&mut self, k: &str) -> Result<&mut dyn Visitor>;
     fn finish(&mut self) -> Result<()>;
+}
+
+pub enum Hint<'a> {
+    Null,
+    Number(u64),
+    Str(&'a str),
+    Bytes(&'a [u8]),
+}
+
+/// Trait that can resolves complex types based on some context
+pub trait Context {
+    fn entity(&mut self, e: Hint) -> Result<Entity> {
+        let _ = e;
+        Err(Error)
+    }
+
+    fn asset(&mut self, a: Hint) -> Result<Asset> {
+        let _ = a;
+        Err(Error)
+    }
 }

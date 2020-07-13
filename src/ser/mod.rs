@@ -102,6 +102,13 @@ pub enum Fragment<'a> {
     F64(f64),
     Seq(Box<dyn Seq + 'a>),
     Map(Box<dyn Map + 'a>),
+    // * MOD: More types to better support binary formats
+    U8(u8),
+    I8(i8),
+    U32(u32),
+    I32(i32),
+    F32(f32),
+    Bytes(Cow<'a, [u8]>),
 }
 
 /// Trait for data structures that can be serialized to a JSON string.

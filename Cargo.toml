@@ -13,6 +13,7 @@ edition = "2018"
 itoa = "0.4.3"
 mini-internal = { version = "=0.1.13", path = "derive" }
 ryu = "1.0"
+base64 = "0.12"
 
 [dev-dependencies]
 automod = "0.1"

@@ -90,6 +90,20 @@ fn to_string_impl(value: &dyn Serialize) -> String {
                     None => out.push('}'),
                 }
             }
+            // * MOD: Format new fagment types
+            Fragment::U8(n) => out.push_str(itoa::Buffer::new().format(n)),
+            Fragment::I8(n) => out.push_str(itoa::Buffer::new().format(n)),
+            Fragment::U32(n) => out.push_str(itoa::Buffer::new().format(n)),
+            Fragment::I32(n) => out.push_str(itoa::Buffer::new().format(n)),
+            Fragment::F32(n) => {
+                if n.is_finite() {
+                    out.push_str(ryu::Buffer::new().format_finite(n))
+                } else {
+                    out.push_str("null")
+                }
+            },
+            Fragment::Bytes(b) =>
+                base64::encode_config_buf(b, base64::URL_SAFE, &mut out),
         }
 
         loop {

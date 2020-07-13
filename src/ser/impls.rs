@@ -31,46 +31,46 @@ impl Serialize for String {
 }
 
 macro_rules! unsigned {
-    ($ty:ident) => {
+    ($ty:ident, $var:ident, $cast:ident) => {
         impl Serialize for $ty {
             fn begin(&self) -> Fragment {
-                Fragment::U64(*self as u64)
+                Fragment::$var(*self as $cast)
             }
         }
     };
 }
-unsigned!(u8);
-unsigned!(u16);
-unsigned!(u32);
-unsigned!(u64);
-unsigned!(usize);
+unsigned!(u8, U8, u8);
+unsigned!(u16, U32, u32);
+unsigned!(u32, U32, u32);
+unsigned!(u64, U64, u64);
+unsigned!(usize, U64, u64);
 
 macro_rules! signed {
-    ($ty:ident) => {
+    ($ty:ident, $var:ident, $cast:ident) => {
         impl Serialize for $ty {
             fn begin(&self) -> Fragment {
-                Fragment::I64(*self as i64)
+                Fragment::$var(*self as $cast)
             }
         }
     };
 }
-signed!(i8);
-signed!(i16);
-signed!(i32);
-signed!(i64);
-signed!(isize);
+signed!(i8, I8, i8);
+signed!(i16, I32, i32);
+signed!(i32, I32, i32);
+signed!(i64, I64, i64);
+signed!(isize, I64, i64);
 
-macro_rules! float {
-    ($ty:ident) => {
-        impl Serialize for $ty {
-            fn begin(&self) -> Fragment {
-                Fragment::F64(*self as f64)
-            }
-        }
-    };
+impl Serialize for f32 {
+    fn begin(&self) -> Fragment {
+        Fragment::F32(*self)
+    }
 }
-float!(f32);
-float!(f64);
+
+impl Serialize for f64 {
+    fn begin(&self) -> Fragment {
+        Fragment::F64(*self)
+    }
+}
 
 impl<'a, T: ?Sized + Serialize> Serialize for &'a T {
     fn begin(&self) -> Fragment {

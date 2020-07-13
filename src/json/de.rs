@@ -80,7 +80,7 @@ fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor) -> Result<()> {
                 None
             }
             Float(n) => {
-                visitor.float(n)?;
+                visitor.double(n)?;
                 None
             }
             Str(s) => {

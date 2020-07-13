@@ -30,7 +30,11 @@ impl Visitor for Ignore {
         Ok(())
     }
 
-    fn float(&mut self, _n: f64) -> Result<()> {
+    fn single(&mut self, _n: f32) -> Result<()> {
+        Ok(())
+    }
+
+    fn double(&mut self, _n: f64) -> Result<()> {
         Ok(())
     }
 

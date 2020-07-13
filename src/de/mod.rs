@@ -245,7 +245,7 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn float(&mut self, n: f64) -> Result<()> {
+    fn double(&mut self, n: f64) -> Result<()> {
         let _ = n;
         Err(Error)
     }
@@ -255,6 +255,17 @@ pub trait Visitor {
     }
 
     fn map(&mut self) -> Result<Box<dyn Map + '_>> {
+        Err(Error)
+    }
+
+    // * MOD: Extra deserializaiton functions
+    fn single(&mut self, n: f32) -> Result<()> {
+        let _ = n;
+        Err(Error)
+    }
+
+    fn bytes(&mut self, b: &[u8]) -> Result<()> {
+        let _ = b;
         Err(Error)
     }
 }

@@ -29,6 +29,7 @@ pub enum Value {
     Null,
     Bool(bool),
     Number(Number),
+    Bytes(Vec<u8>), // * MOD: Byte support
     String(String),
     Array(Array),
     Object(Object),
@@ -48,7 +49,9 @@ impl Serialize for Value {
             Value::Bool(b) => Fragment::Bool(*b),
             Value::Number(Number::U64(n)) => Fragment::U64(*n),
             Value::Number(Number::I64(n)) => Fragment::I64(*n),
+            Value::Number(Number::F32(n)) => Fragment::F32(*n), // * MOD: f32 support
             Value::Number(Number::F64(n)) => Fragment::F64(*n),
+            Value::Bytes(b) => Fragment::Bytes(Cow::Borrowed(b.as_slice())),
             Value::String(s) => Fragment::Str(Cow::Borrowed(s)),
             Value::Array(array) => private::stream_slice(array),
             Value::Object(object) => private::stream_object(object),
@@ -84,7 +87,7 @@ impl Deserialize for Value {
                 Ok(())
             }
 
-            fn float(&mut self, n: f64) -> Result<()> {
+            fn double(&mut self, n: f64) -> Result<()> {
                 self.out = Some(Value::Number(Number::F64(n)));
                 Ok(())
             }

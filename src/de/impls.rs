@@ -102,33 +102,66 @@ unsigned!(u32);
 unsigned!(u64);
 unsigned!(usize);
 
-macro_rules! float {
-    ($ty:ident) => {
-        impl Deserialize for $ty {
-            fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
-                impl Visitor for Place<$ty> {
-                    fn negative(&mut self, n: i64) -> Result<()> {
-                        self.out = Some(n as $ty);
-                        Ok(())
-                    }
+// * MOD: Better support for single and double precistion
+// * floats (avoid any expensive casts whenever possible)
 
-                    fn nonnegative(&mut self, n: u64) -> Result<()> {
-                        self.out = Some(n as $ty);
-                        Ok(())
-                    }
+impl Deserialize for f64 {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
+        impl Visitor for Place<f64> {
+            fn negative(&mut self, n: i64) -> Result<()> {
+                self.out = Some(n as f64);
+                Ok(())
+            }
 
-                    fn float(&mut self, n: f64) -> Result<()> {
-                        self.out = Some(n as $ty);
-                        Ok(())
-                    }
-                }
-                Place::new(out)
+            fn nonnegative(&mut self, n: u64) -> Result<()> {
+                self.out = Some(n as f64);
+                Ok(())
+            }
+
+            fn double(&mut self, n: f64) -> Result<()> {
+                self.out = Some(n as f64);
+                Ok(())
+            }
+            
+            fn single(&mut self, n: f32) -> Result<()> {
+                self.out = Some(n as f64);
+                Ok(())
             }
         }
-    };
+        Place::new(out)
+    }
 }
-float!(f32);
-float!(f64);
+
+impl Deserialize for f32 {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
+        impl Visitor for Place<f32> {
+            fn negative(&mut self, n: i64) -> Result<()> {
+                self.out = Some(n as f32);
+                Ok(())
+            }
+
+            fn nonnegative(&mut self, n: u64) -> Result<()> {
+                self.out = Some(n as f32);
+                Ok(())
+            }
+
+            fn double(&mut self, n: f64) -> Result<()> {
+                if n <= (f32::MAX as f64) && n >= (f32::MIN as f64) {
+                    self.out = Some(n as f32);
+                    Ok(())
+                } else {
+                    Err(Error)
+                }
+            }
+            
+            fn single(&mut self, n: f32) -> Result<()> {
+                self.out = Some(n as f32);
+                Ok(())
+            }
+        }
+        Place::new(out)
+    }
+}
 
 impl<T: Deserialize> Deserialize for Box<T> {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
@@ -168,9 +201,16 @@ impl<T: Deserialize> Deserialize for Box<T> {
                 Ok(())
             }
 
-            fn float(&mut self, n: f64) -> Result<()> {
+            fn single(&mut self, n: f32) -> Result<()> {
                 let mut out = None;
-                Deserialize::begin(&mut out).float(n)?;
+                Deserialize::begin(&mut out).single(n)?;
+                self.out = Some(Box::new(out.unwrap()));
+                Ok(())
+            }
+
+            fn double(&mut self, n: f64) -> Result<()> {
+                let mut out = None;
+                Deserialize::begin(&mut out).double(n)?;
                 self.out = Some(Box::new(out.unwrap()));
                 Ok(())
             }
@@ -268,9 +308,14 @@ impl<T: Deserialize> Deserialize for Option<T> {
                 Deserialize::begin(self.out.as_mut().unwrap()).nonnegative(n)
             }
 
-            fn float(&mut self, n: f64) -> Result<()> {
+            fn single(&mut self, n: f32) -> Result<()> {
                 self.out = Some(None);
-                Deserialize::begin(self.out.as_mut().unwrap()).float(n)
+                Deserialize::begin(self.out.as_mut().unwrap()).single(n)
+            }
+
+            fn double(&mut self, n: f64) -> Result<()> {
+                self.out = Some(None);
+                Deserialize::begin(self.out.as_mut().unwrap()).double(n)
             }
 
             fn seq(&mut self) -> Result<Box<dyn Seq + '_>> {

@@ -1,4 +1,4 @@
-use miniserde::json;
+use knocknoc::json;
 use std::f64;
 
 #[test]

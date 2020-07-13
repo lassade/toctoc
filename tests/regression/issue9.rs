@@ -1,4 +1,4 @@
-use miniserde::json;
+use knocknoc::json;
 
 #[test]
 fn main() {

@@ -5,7 +5,7 @@ use crate::ser::{Fragment, Map, Seq, Serialize};
 /// Serialize any serializable type into a JSON string.
 ///
 /// ```rust
-/// use miniserde::{json, Serialize};
+/// use knocknoc::{json, Serialize};
 ///
 /// #[derive(Serialize, Debug)]
 /// struct Example {

@@ -1,4 +1,4 @@
-//! [![github]](https://github.com/dtolnay/miniserde)&ensp;[![crates-io]](https://crates.io/crates/miniserde)&ensp;[![docs-rs]](https://docs.rs/miniserde)
+//! [![github]](https://github.com/dtolnay/knocknoc)&ensp;[![crates-io]](https://crates.io/crates/knocknoc)&ensp;[![docs-rs]](https://docs.rs/knocknoc)
 //!
 //! [github]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
 //! [crates-io]: https://img.shields.io/badge/crates.io-fc8d62?style=for-the-badge&labelColor=555555&logo=rust
@@ -17,7 +17,7 @@
 //! # Example
 //!
 //! ```rust
-//! use miniserde::{json, Serialize, Deserialize};
+//! use knocknoc::{json, Serialize, Deserialize};
 //!
 //! #[derive(Serialize, Deserialize, Debug)]
 //! struct Example {
@@ -25,7 +25,7 @@
 //!     message: String,
 //! }
 //!
-//! fn main() -> miniserde::Result<()> {
+//! fn main() -> knocknoc::Result<()> {
 //!     let example = Example {
 //!         code: 200,
 //!         message: "reminiscent of Serde".to_owned(),
@@ -89,7 +89,7 @@
 //! you overflow the stack. Some formats set a cap on nesting depth to prevent
 //! stack overflows and just refuse to deserialize deeply nested data.
 //!
-//! In miniserde neither serialization nor deserialization involves recursion.
+//! In knocknoc neither serialization nor deserialization involves recursion.
 //! You can safely process arbitrarily nested data without being exposed to
 //! stack overflows. Not even the Drop impl of our json `Value` type is
 //! recursive so you can safely nest them arbitrarily.
@@ -119,7 +119,7 @@
 //!
 //! ## <font color="#C0C0C0">Different:</font> Structs only
 //!
-//! The miniserde derive macros will refuse anything other than a braced struct
+//! The knocknoc derive macros will refuse anything other than a braced struct
 //! with named fields. Enums and tuple structs are not supported.
 //!
 //! ## <font color="#C0C0C0">Different:</font> No customization
@@ -129,11 +129,11 @@
 //! configurability you can handwrite arbitrarily complicated implementations of
 //! its traits.
 //!
-//! Miniserde provides just one attribute which is `rename`, and severely
+//! knocknoc provides just one attribute which is `rename`, and severely
 //! restricts the kinds of on-the-fly manipulation that are possible in custom
 //! impls. If you need any of this, use Serde -- it's a great library.
 
-#![doc(html_root_url = "https://docs.rs/miniserde/0.1.13")]
+#![doc(html_root_url = "https://docs.rs/knocknoc/0.1.13")]
 #![allow(
     clippy::needless_doctest_main,
     // Regression causing false positives:
@@ -148,7 +148,7 @@ pub use mini_internal::*;
 
 // These derives were renamed from MiniTrait -> Trait with the release of Rust
 // 1.30.0. Keep exposing the old names for backward compatibility but remove in
-// the next major version of Miniserde.
+// the next major version of knocknoc.
 #[doc(hidden)]
 pub use mini_internal::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
 

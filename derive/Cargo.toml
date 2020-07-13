@@ -3,9 +3,9 @@ name = "mini-internal"
 version = "0.1.13"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 license = "MIT OR Apache-2.0"
-description = "Derive macros for miniserde. Use the re-exports from the miniserde crate instead."
-repository = "https://github.com/dtolnay/miniserde"
-documentation = "https://docs.rs/miniserde"
+description = "Derive macros for knocknoc. Use the re-exports from the knocknoc crate instead."
+repository = "https://github.com/dtolnay/knocknoc"
+documentation = "https://docs.rs/knocknoc"
 edition = "2018"
 
 [lib]

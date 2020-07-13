@@ -2,7 +2,7 @@
 
 extern crate test;
 
-use miniserde::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
+use knocknoc::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
 use serde_derive::{Deserialize, Serialize};
 use test::Bencher;
 
@@ -16,10 +16,10 @@ fn input_struct() -> Twitter {
 }
 
 #[bench]
-fn bench_deserialize_miniserde(b: &mut Bencher) {
+fn bench_deserialize_knocknoc(b: &mut Bencher) {
     let j = input_json();
     b.iter(|| {
-        miniserde::json::from_str::<Twitter>(&j).unwrap();
+        knocknoc::json::from_str::<Twitter>(&j).unwrap();
     });
 }
 
@@ -32,10 +32,10 @@ fn bench_deserialize_serdejson(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_serialize_miniserde(b: &mut Bencher) {
+fn bench_serialize_knocknoc(b: &mut Bencher) {
     let s = input_struct();
     b.iter(|| {
-        miniserde::json::to_string(&s);
+        knocknoc::json::to_string(&s);
     });
 }
 

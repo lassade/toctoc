@@ -1,4 +1,4 @@
-Knocknoc (Miniserde fork)
+Knocknoc (knocknoc fork)
 =========
 
 *Fork adds support for enumeration, binary serialization, stateful
@@ -14,7 +14,7 @@ qualified below.
 
 ```toml
 [dependencies]
-miniserde = "0.1"
+knocknoc = "0.1"
 ```
 
 Version requirement: rustc 1.31+
@@ -22,7 +22,7 @@ Version requirement: rustc 1.31+
 ### Example
 
 ```rust
-use miniserde::{json, Serialize, Deserialize};
+use knocknoc::{json, Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Example {
@@ -30,7 +30,7 @@ struct Example {
     message: String,
 }
 
-fn main() -> miniserde::Result<()> {
+fn main() -> knocknoc::Result<()> {
     let example = Example {
         code: 200,
         message: "reminiscent of Serde".to_owned(),
@@ -92,7 +92,7 @@ level of nesting in your data means more stack usage until eventually you
 overflow the stack. Some formats set a cap on nesting depth to prevent stack
 overflows and just refuse to deserialize deeply nested data.
 
-In miniserde neither serialization nor deserialization involves recursion. You
+In knocknoc neither serialization nor deserialization involves recursion. You
 can safely process arbitrarily nested data without being exposed to stack
 overflows. Not even the Drop impl of our json `Value` type is recursive so you
 can safely nest them arbitrarily.
@@ -121,7 +121,7 @@ but it is not a goal to enable that through what this library exposes.
 
 ### Different: Structs only
 
-The miniserde derive macros will refuse anything other than a braced struct with
+The knocknoc derive macros will refuse anything other than a braced struct with
 named fields. Enums and tuple structs are not supported.
 
 ### Different: No customization
@@ -131,7 +131,7 @@ deserialization logic through attributes. Or for the ultimate level of
 configurability you can handwrite arbitrarily complicated implementations of its
 traits.
 
-Miniserde provides just one attribute which is `rename`, and severely restricts
+knocknoc provides just one attribute which is `rename`, and severely restricts
 the kinds of on-the-fly manipulation that are possible in custom impls. If you
 need any of this, use Serde -- it's a great library.
 

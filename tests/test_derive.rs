@@ -1,4 +1,4 @@
-use miniserde::{json, Deserialize, Serialize};
+use knocknoc::{json, Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 enum Tag {

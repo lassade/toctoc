@@ -1,12 +1,38 @@
-Knocknoc (miniserde fork)
+Knocknoc
 =========
 
-*Fork adds support for enumerations, binary serialization, stateful
-or contextual (de)serialization, deserializing into structs and optional
-[simd_json](https://crates.io/crates/simd-json) integration*
+*Knocknoc is a miniserde fork with more features guided towards gamedev*
 
-Prototype of a data structure serialization library with several opposite
-design goals from [Serde](https://serde.rs).
+
+### Extra: Support for u8, i8, u32, i32 and f32
+
+The added support will allow for a smaler binray representation, `f32`
+is very commonly used on games, thus was added to avoid desnecessary
+conversions between and from `f64`, that will take a bit of cpu cycles.
+
+### Extra: Enumeration support
+
+This lib only use externally taged enumerations. Adjacent and internal
+formats may be added in the future (but probably won't).
+
+### Extra: Bson support (binary json)
+
+### Extra: Stateful or contextual (de)serialization
+
+### Extra: Deserilize into
+
+### Extra: SIMD support (optional)
+
+By enabling the `simd` feature, json (de)serialization will be done by
+the [simd_json](https://crates.io/crates/simd-json) crate,
+currely fastest (pure rust) json parsing crate avaliable.
+
+
+Miniserde (original)
+=========
+
+*Prototype of a data structure serialization library with several opposite
+design goals from [Serde](https://serde.rs).*
 
 As a prototype, this library is not a production quality engineering artifact
 the way Serde is. At the same time, it is more than a proof of concept and
@@ -37,10 +63,10 @@ fn main() -> knocknoc::Result<()> {
         message: "reminiscent of Serde".to_owned(),
     };
 
-    let j = json::to_string(&example);
+    let j = json::to_string(&example, &());
     println!("{}", j);
 
-    let out: Example = json::from_str(&j)?;
+    let out: Example = json::from_str(&j, &mut ())?;
     println!("{:?}", out);
 
     Ok(())

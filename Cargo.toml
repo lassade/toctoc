@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 itoa = "0.4.3"
-mini-internal = { version = "=0.1.13", path = "derive" }
+knocknoc_internal = { version = "=0.1.13", path = "derive" }
 ryu = "1.0"
 base64 = "0.12"
 

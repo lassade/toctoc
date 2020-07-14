@@ -6,13 +6,13 @@
 //! ## Serializing a primitive
 //!
 //! ```rust
-//! use knocknoc::ser::{Fragment, Serialize};
+//! use knocknoc::ser::{Fragment, Serialize, Context};
 //!
 //! // The data structure that we want to serialize as a primitive.
 //! struct MyBoolean(bool);
 //!
 //! impl Serialize for MyBoolean {
-//!     fn begin(&self) -> Fragment {
+//!     fn begin(&self, _c: &dyn Context) -> Fragment {
 //!         Fragment::Bool(self.0)
 //!     }
 //! }
@@ -21,13 +21,13 @@
 //! ## Serializing a sequence
 //!
 //! ```rust
-//! use knocknoc::ser::{Fragment, Seq, Serialize};
+//! use knocknoc::ser::{Fragment, Seq, Serialize, Context};
 //!
 //! // Some custom sequence type that we want to serialize.
 //! struct MyVec<T>(Vec<T>);
 //!
 //! impl<T: Serialize> Serialize for MyVec<T> {
-//!     fn begin(&self) -> Fragment {
+//!     fn begin(&self, _c: &dyn Context) -> Fragment {
 //!         Fragment::Seq(Box::new(SliceStream { iter: self.0.iter() }))
 //!     }
 //! }
@@ -50,7 +50,7 @@
 //! `#[derive(Serialize)]`.
 //!
 //! ```rust
-//! use knocknoc::ser::{Fragment, Map, Serialize};
+//! use knocknoc::ser::{Fragment, Map, Serialize, Context};
 //! use std::borrow::Cow;
 //!
 //! // The struct that we would like to serialize.
@@ -60,7 +60,7 @@
 //! }
 //!
 //! impl Serialize for Demo {
-//!     fn begin(&self) -> Fragment {
+//!     fn begin(&self, _c: &dyn Context) -> Fragment {
 //!         Fragment::Map(Box::new(DemoStream {
 //!             data: self,
 //!             state: 0,
@@ -116,7 +116,7 @@ pub enum Fragment<'a> {
 ///
 /// [Refer to the module documentation for examples.][::ser]
 pub trait Serialize {
-    fn begin(&self, context: Option<&dyn Context>) -> Fragment;
+    fn begin(&self, context: &dyn Context) -> Fragment;
 }
 
 /// Trait that can iterate elements of a sequence.

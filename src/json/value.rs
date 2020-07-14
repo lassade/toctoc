@@ -43,7 +43,7 @@ impl Default for Value {
 }
 
 impl Serialize for Value {
-    fn begin(&self, _c: Option<&dyn ser::Context>) -> Fragment {
+    fn begin(&self, _c: &dyn ser::Context) -> Fragment {
         match self {
             Value::Null => Fragment::Null,
             Value::Bool(b) => Fragment::Bool(*b),
@@ -62,7 +62,7 @@ impl Serialize for Value {
 impl Deserialize for Value {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
         impl Visitor for Place<Value> {
-            fn null(&mut self, _c: &mut Option<&mut dyn de::Context>) -> Result<()> {
+            fn null(&mut self, _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::Null);
                 Ok(())
             }
@@ -72,17 +72,17 @@ impl Deserialize for Value {
                 Ok(())
             }
 
-            fn string(&mut self, s: &str, _c: &mut Option<&mut dyn de::Context>) -> Result<()> {
+            fn string(&mut self, s: &str, _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::String(s.to_owned()));
                 Ok(())
             }
 
-            fn negative(&mut self, n: i64, _c: &mut Option<&mut dyn de::Context>) -> Result<()> {
+            fn negative(&mut self, n: i64, _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::Number(Number::I64(n)));
                 Ok(())
             }
 
-            fn nonnegative(&mut self, n: u64, _c: &mut Option<&mut dyn de::Context>) -> Result<()> {
+            fn nonnegative(&mut self, n: u64, _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::Number(Number::U64(n)));
                 Ok(())
             }
@@ -92,7 +92,7 @@ impl Deserialize for Value {
                 Ok(())
             }
 
-            fn seq(&mut self, _c: &mut Option<&mut dyn de::Context>) -> Result<Box<dyn Seq + '_>> {
+            fn seq(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Seq + '_>> {
                 Ok(Box::new(ArrayBuilder {
                     out: &mut self.out,
                     array: Array::new(),
@@ -100,7 +100,7 @@ impl Deserialize for Value {
                 }))
             }
 
-            fn map(&mut self, _c: &mut Option<&mut dyn de::Context>) -> Result<Box<dyn Map + '_>> {
+            fn map(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Map + '_>> {
                 Ok(Box::new(ObjectBuilder {
                     out: &mut self.out,
                     object: Object::new(),

@@ -10,7 +10,7 @@ impl dyn Visitor {
 struct Ignore;
 
 impl Visitor for Ignore {
-    fn null(&mut self, _c: &mut Option<&mut dyn Context>) -> Result<()> {
+    fn null(&mut self, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 
@@ -18,15 +18,15 @@ impl Visitor for Ignore {
         Ok(())
     }
 
-    fn string(&mut self, _s: &str, _c: &mut Option<&mut dyn Context>) -> Result<()> {
+    fn string(&mut self, _s: &str, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 
-    fn negative(&mut self, _n: i64, _c: &mut Option<&mut dyn Context>) -> Result<()> {
+    fn negative(&mut self, _n: i64, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 
-    fn nonnegative(&mut self, _n: u64, _c: &mut Option<&mut dyn Context>) -> Result<()> {
+    fn nonnegative(&mut self, _n: u64, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 
@@ -38,11 +38,11 @@ impl Visitor for Ignore {
         Ok(())
     }
 
-    fn seq(&mut self, _c: &mut Option<&mut dyn Context>) -> Result<Box<dyn Seq + '_>> {
+    fn seq(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Seq + '_>> {
         Ok(Box::new(Ignore))
     }
 
-    fn map(&mut self, _c: &mut Option<&mut dyn Context>) -> Result<Box<dyn Map + '_>> {
+    fn map(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Map + '_>> {
         Ok(Box::new(Ignore))
     }
 }

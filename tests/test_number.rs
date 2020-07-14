@@ -11,7 +11,7 @@ fn test_ser() {
     ];
 
     for (number, expected) in cases {
-        let actual = json::to_string(number, None);
+        let actual = json::to_string(number, &());
         assert_eq!(actual, *expected);
     }
 }

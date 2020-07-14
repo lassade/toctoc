@@ -61,7 +61,7 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
             }
 
             impl #impl_generics knocknoc::de::Visitor for __Visitor #ty_generics #bounded_where_clause {
-                fn map(&mut self, context: &mut Option<&mut dyn knocknoc::de::Context>) -> knocknoc::Result<knocknoc::export::Box<dyn knocknoc::de::Map + '_>> {
+                fn map(&mut self, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<knocknoc::export::Box<dyn knocknoc::de::Map + '_>> {
                     Ok(knocknoc::export::Box::new(__State {
                         #(
                             #fieldname: knocknoc::Deserialize::default(),
@@ -156,7 +156,7 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenS
             }
 
             impl knocknoc::de::Visitor for __Visitor {
-                fn string(&mut self, s: &knocknoc::export::str, context: &mut Option<&mut dyn knocknoc::de::Context>) -> knocknoc::Result<()> {
+                fn string(&mut self, s: &knocknoc::export::str, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                     let value = match s {
                         #( #names => #ident::#var_idents, )*
                         _ => { return knocknoc::export::Err(knocknoc::Error) },

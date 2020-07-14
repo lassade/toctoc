@@ -31,10 +31,10 @@
 //!         message: "reminiscent of Serde".to_owned(),
 //!     };
 //!
-//!     let j = json::to_string(&example);
+//!     let j = json::to_string(&example, &());
 //!     println!("{}", j);
 //!
-//!     let out: Example = json::from_str(&j)?;
+//!     let out: Example = json::from_str(&j, &mut ())?;
 //!     println!("{:?}", out);
 //!
 //!     Ok(())
@@ -144,13 +144,13 @@
 )]
 
 #[doc(hidden)]
-pub use mini_internal::*;
+pub use knocknoc_internal::*;
 
 // These derives were renamed from MiniTrait -> Trait with the release of Rust
 // 1.30.0. Keep exposing the old names for backward compatibility but remove in
 // the next major version of knocknoc.
 #[doc(hidden)]
-pub use mini_internal::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
+pub use knocknoc_internal::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
 
 // Not public API.
 #[doc(hidden)]

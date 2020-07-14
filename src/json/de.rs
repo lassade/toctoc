@@ -20,13 +20,13 @@ use crate::error::{Error, Result};
 /// fn main() -> knocknoc::Result<()> {
 ///     let j = r#" {"code": 200, "message": "reminiscent of Serde"} "#;
 ///
-///     let out: Example = json::from_str(&j, None)?;
+///     let out: Example = json::from_str(&j, &mut ())?;
 ///     println!("{:?}", out);
 ///
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<T: Deserialize>(j: &str, context: Option<&mut dyn Context>) -> Result<T> {
+pub fn from_str<T: Deserialize>(j: &str, context: &mut dyn Context) -> Result<T> {
     let mut out = None;
     from_str_impl(j, T::begin(&mut out), context)?;
     out.ok_or(Error)
@@ -53,7 +53,7 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, mut context: Option<&mut dyn Context>) -> Result<()> {
+fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, context: &mut dyn Context) -> Result<()> {
     let mut de = Deserializer {
         input: j.as_bytes(),
         pos: 0,
@@ -64,7 +64,7 @@ fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, mut context: Option<&mu
     'outer: loop {
         let layer = match de.event()? {
             Null => {
-                visitor.null(&mut context)?;
+                visitor.null(context)?;
                 None
             }
             Bool(b) => {
@@ -72,11 +72,11 @@ fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, mut context: Option<&mu
                 None
             }
             Negative(n) => {
-                visitor.negative(n, &mut context)?;
+                visitor.negative(n, context)?;
                 None
             }
             Nonnegative(n) => {
-                visitor.nonnegative(n, &mut context)?;
+                visitor.nonnegative(n, context)?;
                 None
             }
             Float(n) => {
@@ -84,15 +84,15 @@ fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, mut context: Option<&mu
                 None
             }
             Str(s) => {
-                visitor.string(s, &mut context)?;
+                visitor.string(s, context)?;
                 None
             }
             SeqStart => {
-                let seq = careful!(visitor.seq(&mut context)? as Box<dyn Seq>);
+                let seq = careful!(visitor.seq(context)? as Box<dyn Seq>);
                 Some(Layer::Seq(seq))
             }
             MapStart => {
-                let map = careful!(visitor.map(&mut context)? as Box<dyn Map>);
+                let map = careful!(visitor.map(context)? as Box<dyn Map>);
                 Some(Layer::Map(map))
             }
         };

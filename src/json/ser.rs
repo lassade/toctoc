@@ -19,11 +19,11 @@ use crate::ser::{Fragment, Map, Seq, Serialize, Context};
 ///         message: "reminiscent of Serde".to_owned(),
 ///     };
 ///
-///     let j = json::to_string(&example, None);
+///     let j = json::to_string(&example, &());
 ///     println!("{}", j);
 /// }
 /// ```
-pub fn to_string<T: ?Sized + Serialize>(value: &T, context: Option<&dyn Context>) -> String {
+pub fn to_string<T: ?Sized + Serialize>(value: &T, context: &dyn Context) -> String {
     to_string_impl(&value, context)
 }
 
@@ -45,7 +45,7 @@ impl<'a> Drop for Serializer<'a> {
     }
 }
 
-fn to_string_impl(value: &dyn Serialize, context: Option<&dyn Context>) -> String {
+fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
     let mut out = String::new();
     let mut serializer = Serializer { stack: Vec::new() };
     let mut fragment = value.begin(context);

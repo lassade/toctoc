@@ -12,7 +12,7 @@ enum E {
 }
 
 impl Serialize for E {
-    fn begin(&self, _context: Option<&dyn knocknoc::ser::Context>) -> Fragment {
+    fn begin(&self, _c: &dyn knocknoc::ser::Context) -> Fragment {
         match self {
             E::W { a, b } => {
                 #[derive(knocknoc::Serialize)]
@@ -102,14 +102,14 @@ knocknoc::make_place!(Place);
 impl Deserialize for E {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
         impl Visitor for Place<E> {
-            fn string(&mut self, s: &str, _context: &mut Option<&mut dyn knocknoc::de::Context>) -> knocknoc::Result<()> {
+            fn string(&mut self, s: &str, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                 match s {
                     "Z" => { self.out = Some(E::Z); Ok(()) },
                     _ => Err(knocknoc::Error),
                 }
             }
         
-            fn map(&mut self, _context: &mut Option<&mut dyn knocknoc::de::Context>) -> knocknoc::Result<Box<dyn knocknoc::de::Map + '_>> {
+            fn map(&mut self, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<Box<dyn knocknoc::de::Map + '_>> {
                 #[derive(knocknoc::Deserialize)]
                 struct W {
                     a: i32, b: i32,
@@ -186,12 +186,12 @@ fn test_serde() {
     ];
     
     for (val, expected) in cases {
-        let actual = json::to_string(val, None);
+        let actual = json::to_string(val, &mut ());
         assert_eq!(actual, *expected);
     }
 
     for (expected, val) in cases {
-        let actual: E = json::from_str(val, None).unwrap();
+        let actual: E = json::from_str(val, &mut ()).unwrap();
         assert_eq!(actual, *expected);
     }
 }

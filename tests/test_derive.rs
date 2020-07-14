@@ -24,7 +24,7 @@ struct Nested {
 #[test]
 fn test_de() {
     let j = r#" {"x": "X", "t1": "A", "t2": "renamedB", "n": {"y": ["Y", "Y"]}} "#;
-    let actual: Example = json::from_str(j, None).unwrap();
+    let actual: Example = json::from_str(j, &mut ()).unwrap();
     let expected = Example {
         x: "X".to_owned(),
         t1: Tag::A,
@@ -48,7 +48,7 @@ fn test_ser() {
             z: None,
         },
     };
-    let actual = json::to_string(&example, None);
+    let actual = json::to_string(&example, &());
     let expected = r#"{"x":"X","t1":"A","t2":"renamedB","n":{"y":["Y","Y"],"z":null}}"#;
     assert_eq!(actual, expected);
 }

@@ -60,7 +60,7 @@
 //!
 //! ```rust
 //! use knocknoc::{make_place, Result};
-//! use knocknoc::de::{Deserialize, Seq, Visitor};
+//! use knocknoc::de::{Deserialize, Seq, Visitor, Context};
 //! use std::mem;
 //!
 //! make_place!(Place);
@@ -68,7 +68,7 @@
 //! struct MyVec<T>(Vec<T>);
 //!
 //! impl<T: Deserialize> Visitor for Place<MyVec<T>> {
-//!     fn seq(&mut self) -> Result<Box<dyn Seq + '_>> {
+//!     fn seq(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Seq + '_>> {
 //!         Ok(Box::new(VecBuilder {
 //!             out: &mut self.out,
 //!             vec: Vec::new(),
@@ -120,7 +120,7 @@
 //!
 //! ```rust
 //! use knocknoc::{make_place, Result};
-//! use knocknoc::de::{Deserialize, Map, Visitor};
+//! use knocknoc::de::{Deserialize, Map, Visitor, Context};
 //!
 //! make_place!(Place);
 //!
@@ -131,7 +131,7 @@
 //! }
 //!
 //! impl Visitor for Place<Demo> {
-//!     fn map(&mut self) -> Result<Box<dyn Map + '_>> {
+//!     fn map(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Map + '_>> {
 //!         // Like for sequences, we produce a builder that can hand out places
 //!         // to write one struct field at a time.
 //!         Ok(Box::new(DemoBuilder {
@@ -223,8 +223,8 @@ pub trait Deserialize: Sized {
 ///
 /// [Refer to the module documentation for examples.][::de]
 pub trait Visitor {
-    fn null(&mut self, context: &mut Option<&mut dyn Context>) -> Result<()> {
-        let _ = context;
+    fn null(&mut self, c: &mut dyn Context) -> Result<()> {
+        let _ = c;
         Err(Error)
     }
 
@@ -233,20 +233,20 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn string(&mut self, s: &str, context: &mut Option<&mut dyn Context>) -> Result<()> {
-        let _ = context;
+    fn string(&mut self, s: &str, c: &mut dyn Context) -> Result<()> {
+        let _ = c;
         let _ = s;
         Err(Error)
     }
 
-    fn negative(&mut self, n: i64, context: &mut Option<&mut dyn Context>) -> Result<()> {
-        let _ = context;
+    fn negative(&mut self, n: i64, c: &mut dyn Context) -> Result<()> {
+        let _ = c;
         let _ = n;
         Err(Error)
     }
 
-    fn nonnegative(&mut self, n: u64, context: &mut Option<&mut dyn Context>) -> Result<()> {
-        let _ = context;
+    fn nonnegative(&mut self, n: u64, c: &mut dyn Context) -> Result<()> {
+        let _ = c;
         let _ = n;
         Err(Error)
     }
@@ -256,13 +256,13 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn seq(&mut self, context: &mut Option<&mut dyn Context>) -> Result<Box<dyn Seq + '_>> {
-        let _ = context;
+    fn seq(&mut self, c: &mut dyn Context) -> Result<Box<dyn Seq + '_>> {
+        let _ = c;
         Err(Error)
     }
     
-    fn map(&mut self, context: &mut Option<&mut dyn Context>) -> Result<Box<dyn Map + '_>> {
-        let _ = context;
+    fn map(&mut self, c: &mut dyn Context) -> Result<Box<dyn Map + '_>> {
+        let _ = c;
         Err(Error)
     }
 
@@ -272,8 +272,8 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn bytes(&mut self, b: &[u8], context: &mut Option<&mut dyn Context>) -> Result<()> {
-        let _ = context;
+    fn bytes(&mut self, b: &[u8], c: &mut dyn Context) -> Result<()> {
+        let _ = c;
         let _ = b;
         Err(Error)
     }
@@ -302,7 +302,7 @@ pub enum Hint<'a> {
     Bytes(&'a [u8]),
 }
 
-/// Trait that can resolves complex types based on some context
+/// Trait that can resolves complex types based on some context.
 pub trait Context {
     fn entity(&mut self, e: Hint) -> Result<Entity> {
         let _ = e;

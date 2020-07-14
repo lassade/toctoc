@@ -1,7 +1,7 @@
 [package]
 name = "knocknoc_internal"
 version = "0.1.13"
-authors = ["David Tolnay <dtolnay@gmail.com>"]
+authors = ["David Tolnay <dtolnay@gmail.com>", "Felipe Jorge <felipe.jorge.pereira@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Derive macros for knocknoc. Use the re-exports from the knocknoc crate instead."
 repository = "https://github.com/dtolnay/knocknoc"

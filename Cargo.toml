@@ -1,7 +1,7 @@
 [package]
 name = "knocknoc"
 version = "0.1.13"
-authors = ["David Tolnay <dtolnay@gmail.com>"]
+authors = ["David Tolnay <dtolnay@gmail.com>", "Felipe Jorge <felipe.jorge.pereira@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Data structure serialization library with several opposite design goals from Serde."
 repository = "https://github.com/dtolnay/knocknoc"

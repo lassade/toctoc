@@ -164,7 +164,6 @@ mod place;
 
 mod error;
 mod ignore;
-mod bin;
 
 pub mod de;
 pub mod json;

@@ -15,7 +15,5 @@ mod help {
 pub type Asset = (std::sync::Arc<u32>, std::any::TypeId, u32);
 pub type Entity = (u32, u32);
 
-pub use crate::bin::Bin;
-
 /// Hex conversion utility
 pub use hex;

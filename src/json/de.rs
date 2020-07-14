@@ -3,6 +3,7 @@ use std::mem;
 use std::str;
 
 use self::Event::*;
+use crate::json::HEX_HINT;
 use crate::de::{Deserialize, Map, Seq, Visitor, Context};
 use crate::error::{Error, Result};
 
@@ -84,7 +85,13 @@ fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, context: &mut dyn Conte
                 None
             }
             Str(s) => {
-                visitor.string(s, context)?;
+                if s.chars().last() == Some(HEX_HINT) {
+                    let c = s.len() - 1;
+                    let b = hex::decode(&s[..c]).map_err(|_| Error)?;
+                    visitor.bytes(b.as_slice(), context)?;
+                } else {
+                    visitor.string(s, context)?;
+                }
                 None
             }
             SeqStart => {

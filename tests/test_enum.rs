@@ -177,7 +177,7 @@ impl Deserialize for E {
 }
 
 #[test]
-fn test_serde() {
+fn test_enum() {
     let cases = &[
         (E::W { a: 0, b: 0 }, r#"{"W":{"a":0,"b":0}}"#),
         (E::X(0, 0), r#"{"X":[0,0]}"#),

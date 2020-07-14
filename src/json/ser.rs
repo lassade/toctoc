@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use crate::json::HEX_HINT_ESCAPED;
 use crate::ser::{Fragment, Map, Seq, Serialize, Context};
 
 /// Serialize any serializable type into a JSON string.
@@ -105,6 +106,7 @@ fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
             Fragment::Bin(b) => {
                 out.push('"');
                 out.push_str(&hex::encode(b.as_ref()));
+                out.push_str(HEX_HINT_ESCAPED);
                 out.push('"');
             },
         }

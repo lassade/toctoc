@@ -109,7 +109,9 @@ pub enum Fragment<'a> {
     U32(u32),
     I32(i32),
     F32(f32),
-    Bytes(Cow<'a, [u8]>),
+    /// Binary data, shuolb be serialized as hex string when binary
+    /// output is not supported like in json
+    Bin(Cow<'a, [u8]>),
 }
 
 /// Trait for data structures that can be serialized to a JSON string.

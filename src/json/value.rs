@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::mem;
 
 use crate::de::{self, Deserialize, Map, Seq, Visitor};
-use crate::error::Result;
+use crate::error::{Result, Error};
 use crate::json::{Array, Number, Object};
 use crate::private;
 use crate::ser::{self, Fragment, Serialize};
@@ -29,8 +29,8 @@ pub enum Value {
     Null,
     Bool(bool),
     Number(Number),
-    Bytes(Vec<u8>), // * MOD: Byte support
     String(String),
+    Binary(Vec<u8>), // * MOD: Byte support
     Array(Array),
     Object(Object),
 }
@@ -51,7 +51,7 @@ impl Serialize for Value {
             Value::Number(Number::I64(n)) => Fragment::I64(*n),
             Value::Number(Number::F32(n)) => Fragment::F32(*n), // * MOD: f32 support
             Value::Number(Number::F64(n)) => Fragment::F64(*n),
-            Value::Bytes(b) => Fragment::Bytes(Cow::Borrowed(b.as_slice())),
+            Value::Binary(b) => Fragment::Bin(Cow::Borrowed(b.as_slice())), // * MOD: binary data support
             Value::String(s) => Fragment::Str(Cow::Borrowed(s)),
             Value::Array(array) => private::stream_slice(array),
             Value::Object(object) => private::stream_object(object),
@@ -107,6 +107,16 @@ impl Deserialize for Value {
                     key: None,
                     value: None,
                 }))
+            }
+
+            fn single(&mut self, n: f32) -> Result<()> {
+                self.out = Some(Value::Number(Number::F32(n)));
+                Ok(())
+            }
+        
+            fn bytes(&mut self, b: &[u8], _c: &mut dyn de::Context) -> Result<()> {
+                self.out = Some(Value::Binary(b.to_owned()));
+                Ok(())
             }
         }
 
@@ -167,5 +177,17 @@ impl Deserialize for Value {
         }
 
         Place::new(out)
+    }
+}
+
+impl Value {
+    /// Converts a hex string into binary data
+    pub fn from_hex(&mut self) -> Result<()> {
+        match self {
+            Value::String(ref s) =>
+                *self = Value::Binary(hex::decode(s).map_err(|_| Error)?),
+            _ => { return Err(Error); }
+        }
+        Ok(())
     }
 }

@@ -102,8 +102,11 @@ fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
                     out.push_str("null")
                 }
             },
-            Fragment::Bytes(b) =>
-                base64::encode_config_buf(b, base64::URL_SAFE, &mut out),
+            Fragment::Bin(b) => {
+                out.push('"');
+                out.push_str(&hex::encode(b.as_ref()));
+                out.push('"');
+            },
         }
 
         loop {

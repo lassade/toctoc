@@ -30,7 +30,7 @@ impl Deserialize for Bytes {
 #[test]
 fn test_binhint() {
     let cases = &[
-        (Bytes(vec![2, 0, 3, 4]), r#""02000304\u0011""#),
+        (Bytes(vec![2, 0, 3, 4]), r#""02000304\u0010""#),
     ];
     
     for (val, expected) in cases {

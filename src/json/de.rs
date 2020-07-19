@@ -87,7 +87,7 @@ fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, context: &mut dyn Conte
             Str(s) => {
                 if s.chars().last() == Some(HEX_HINT) {
                     let c = s.len() - 1;
-                    let b = hex::decode(&s[..c]).map_err(|_| Error)?;
+                    let b = bintext::hex::decode(&s[..c]).map_err(|_| Error)?;
                     visitor.bytes(b.as_slice(), context)?;
                 } else {
                     visitor.string(s, context)?;

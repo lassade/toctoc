@@ -16,4 +16,4 @@ pub type Asset = (std::sync::Arc<u32>, std::any::TypeId, u32);
 pub type Entity = (u32, u32);
 
 /// Hex conversion utility
-pub use hex;
+pub use bintext::hex;

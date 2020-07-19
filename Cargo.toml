@@ -13,7 +13,7 @@ edition = "2018"
 itoa = "0.4.3"
 knocknoc_internal = { version = "=0.1.13", path = "derive" }
 ryu = "1.0"
-hex = "0.4.2"
+bintext = { path = "../bintext" }
 simd-json = { version = "0.3.14", default-features = false, features = ["swar-number-parsing"], optional = true }
 
 [dev-dependencies]

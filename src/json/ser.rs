@@ -105,7 +105,7 @@ fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
             },
             Fragment::Bin(b) => {
                 out.push('"');
-                out.push_str(&hex::encode(b.as_ref()));
+                out.push_str(&bintext::hex::encode(b.as_ref()));
                 out.push_str(HEX_HINT_ESCAPED);
                 out.push('"');
             },

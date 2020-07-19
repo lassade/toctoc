@@ -185,7 +185,7 @@ impl Value {
     pub fn from_hex(&mut self) -> Result<()> {
         match self {
             Value::String(ref s) =>
-                *self = Value::Binary(hex::decode(s).map_err(|_| Error)?),
+                *self = Value::Binary(bintext::hex::decode_no(s).map_err(|_| Error)?),
             _ => { return Err(Error); }
         }
         Ok(())

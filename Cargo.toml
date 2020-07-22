@@ -29,5 +29,5 @@ members = ["derive"]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
-default = []
+default = ["simd"]
 simd = ["simd-json"]

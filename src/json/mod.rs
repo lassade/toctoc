@@ -6,7 +6,9 @@
 mod ser;
 pub use self::ser::to_string;
 
+#[cfg(not(feature = "simd"))]
 mod de;
+#[cfg(not(feature = "simd"))]
 pub use self::de::from_str;
 
 mod value;
@@ -23,9 +25,14 @@ pub use self::object::Object;
 
 mod drop;
 
-/// String pos-fixed with `\u{0010}` control char, should be treated as
-/// hex encoded binary data
-pub const HEX_HINT: char = '\u{10}';
+#[cfg(feature = "simd")]
+mod simd;
+#[cfg(feature = "simd")]
+pub use simd::from_str;
+
+/// Any string ending with `\u0010` ascii control char,
+/// should be treated as hex encoded binary data
+pub const HEX_HINT: char = '\x10';
 
 /// Utf8 escaped string for `HEX_HINT` char.
 pub const HEX_HINT_ESCAPED: &'static str = r#"\u0010"#;

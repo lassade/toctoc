@@ -27,9 +27,9 @@ use crate::error::{Error, Result};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<T: Deserialize>(j: &str, context: &mut dyn Context) -> Result<T> {
+pub fn from_str<T: Deserialize>(j: &str, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    from_str_impl(j, T::begin(&mut out), context)?;
+    from_str_impl(j, T::begin(&mut out), ctx)?;
     out.ok_or(Error)
 }
 

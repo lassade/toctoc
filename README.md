@@ -17,13 +17,17 @@ formats may be added in the future (but probably won't).
 
 ### Extra: Bson support (binary json)
 
+TODO
+
 ### Extra: Stateful or contextual (de)serialization
 
-Used for load assets or referece game entities ...
+Used for load assets or referece game entities
 
 ### Extra: Deserilize into
 
-### Extra: SIMD support (optional)
+TODO
+
+### Extra: SIMD support
 
 By enabling the `simd` feature, json (de)serialization will be done by
 the [simd_json](https://crates.io/crates/simd-json) crate,

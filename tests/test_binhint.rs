@@ -39,7 +39,7 @@ fn test_binhint() {
     }
 
     for (expected, val) in cases {
-        let actual: Bytes = json::from_str(val, &mut ()).unwrap();
+        let actual: Bytes = json::from_str(*val, &mut ()).unwrap();
         assert_eq!(actual, *expected);
     }
 }

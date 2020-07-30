@@ -1,5 +1,4 @@
 use std::mem;
-use std::str;
 
 use crate::json::HEX_HINT;
 use crate::de::{Deserialize, Map, Seq, Visitor, Context};
@@ -20,16 +19,16 @@ use simd_json::{Node, StaticNode};
 /// fn main() -> knocknoc::Result<()> {
 ///     let j = r#" {"code": 200, "message": "reminiscent of Serde"} "#;
 ///
-///     let out: Example = json::from_str(&j, &mut ())?;
+///     let out: Example = json::from_str(j.to_string(), &mut ())?;
 ///     println!("{:?}", out);
 ///
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<T: Deserialize>(j: &str, context: &mut dyn Context) -> Result<T> {
+pub fn from_str<T: Deserialize>(j: String, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    let mut bytes = j.as_bytes().to_vec();
-    from_str_impl(&mut bytes, T::begin(&mut out), context)?;
+    let mut bytes = j.into_bytes();
+    from_str_impl(&mut bytes, T::begin(&mut out), ctx)?;
     out.ok_or(Error)
 }
 

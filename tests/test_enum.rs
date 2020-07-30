@@ -191,7 +191,7 @@ fn test_enum() {
     }
 
     for (expected, val) in cases {
-        let actual: E = json::from_str(val, &mut ()).unwrap();
+        let actual: E = json::from_str(*val, &mut ()).unwrap();
         assert_eq!(actual, *expected);
     }
 }

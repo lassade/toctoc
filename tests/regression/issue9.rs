@@ -1,7 +1,7 @@
-use knocknoc::json;
+use knocknoc::{json, Result};
 
 #[test]
 fn main() {
-    let result = json::from_str::<bool>(" true && false ", &mut ());
+    let result: Result<bool> = json::from_str(" true && false ", &mut ());
     assert!(result.is_err());
 }

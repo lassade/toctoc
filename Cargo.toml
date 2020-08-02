@@ -15,12 +15,14 @@ knocknoc_internal = { version = "=0.1.13", path = "derive" }
 ryu = "1.0"
 bintext = { path = "../bintext" }
 simd-json = { version = "0.3.14", default-features = false, features = ["swar-number-parsing"], optional = true }
+paste = "1.0.0"
 
 [dev-dependencies]
 automod = "0.1"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
+bson = "1.0.0"
 
 [workspace]
 members = ["derive"]

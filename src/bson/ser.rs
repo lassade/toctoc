@@ -5,13 +5,14 @@ use crate::ser::{Fragment, Map, Seq, Serialize, Context};
 #[cfg(target_endian = "big")]
 #[allow(unused)]
 pub fn check_endianess() {
-    compile_error!("bson not supported on big-endian targets, because of strings and bineary data are assumed to be little endian");
+    compile_error!("bson not supported on big-endian targets, because of strings and bineary data are assumed to be in little endian");
 }
 
-/// Serialize any serializable type into a JSON string.
+/// Serialize any serializable type into a BSON byte vec.
 ///
 /// ```rust
-/// use knocknoc::{json, Serialize};
+/// use knocknoc::{bson, Serialize};
+/// use knocknoc::export::hex;
 ///
 /// #[derive(Serialize, Debug)]
 /// struct Example {
@@ -25,8 +26,8 @@ pub fn check_endianess() {
 ///         message: "reminiscent of Serde".to_owned(),
 ///     };
 ///
-///     let j = json::to_bin(&example, &());
-///     println!("{}", j);
+///     let b = bson::to_bin(&example, &());
+///     println!("{}", hex::encode(&b));
 /// }
 /// ```
 pub fn to_bin<T: ?Sized + Serialize>(value: &T, context: &dyn Context) -> Vec<u8> {
@@ -82,32 +83,22 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
     let mut serializer = Serializer { stack: Vec::new() };
     let mut fragment = value.begin(context);
     let mut field: Option<Cow<str>> = None;
-    let mut index = 0usize;
 
     // Root document
-    let root = matches!(fragment, Fragment::Map(_) | Fragment::Seq(_));
-
-    // Root level document
-    if !root { wb!(out, 0_u32); } // TODO: write byte lenght
+    wb!(out, 0_u32); // TODO: write byte lenght
 
     loop {
-        let frist = index == 0;
-        index += 1;
-        
-         // Keep type index to change it later
+        // Keep type index to change it later
         let i = out.len();
 
-        if !frist || !root {
-            // TODO: should be string or some more common type
-            // Use null as temp type
-            wb!(out, 0x0A_u8);
+        // Use null as temp type
+        wb!(out, 0x0A_u8);
 
-            // e_name contents
-            if let Some(n) = field.take() {
-                out.extend_from_slice(&n.as_bytes());
-            }
-            wb!(out, 0x00_u8); // c_string null terminator
+        // e_name contents
+        if let Some(n) = field.take() {
+            out.extend_from_slice(&n.as_bytes());
         }
+        wb!(out, 0x00_u8); // c_string null terminator
 
         match fragment {
             Fragment::Null => {},
@@ -125,7 +116,7 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
             Fragment::I64(n) => { out[i] = 0x10; wb!(out, n); },
             Fragment::F64(n) => { out[i] = 0x01; wb!(out, n); },
             Fragment::Seq(mut seq) => {
-                if !frist || !root { out[i] = 0x04; }
+                out[i] = 0x04;
                 // invariant: `seq` must outlive `first`
                 match careful!(seq.next() as Option<&dyn Serialize>) {
                     Some(first) => {
@@ -139,7 +130,7 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
                 }
             }
             Fragment::Map(mut map) => {
-                if !frist || !root { out[i] = 0x03; }
+                out[i] = 0x03;
                 // invariant: `map` must outlive `first`
                 match careful!(map.next() as Option<(Cow<str>, &dyn Serialize)>) {
                     Some((key, first)) => {
@@ -191,7 +182,7 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
                     }
                 }
                 None => {
-                    if !root { done!(out, 0); }
+                    done!(out, 0); // End root level document
                     return out;
                 }
             }

@@ -1,7 +1,7 @@
 use knocknoc::{Deserialize as KDeserialize, Serialize as KSerialize};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Deserialize, Serialize, KDeserialize, KSerialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, KDeserialize, KSerialize)]
 struct V {
     string: String,
     b: bool,
@@ -22,17 +22,17 @@ fn test_bson_struct() {
     let bin = knocknoc::bson::to_bin(&v, & ());
 
     let mut ground = vec![];
-    bson::to_bson(&v).unwrap()
+    bson::to_bson(&Primitive { val: v.clone() }).unwrap()
         .as_document().unwrap()
         .to_writer(&mut ground).unwrap();
         
     assert_eq!(bintext::hex::encode(&bin), bintext::hex::encode(&ground));
 
-    let v1: V = bson::from_bson(
+    let v1: Primitive<V> = bson::from_bson(
         bson::Document::from_reader(&mut &bin[..]).unwrap().into()
     ).unwrap();
 
-    assert_eq!(v, v1);
+    assert_eq!(v, v1.val);
 
     let v2 = knocknoc::bson::from_bin(&bin, &mut ()).unwrap();
     assert_eq!(v, v2);

@@ -166,8 +166,9 @@ mod error;
 mod ignore;
 
 pub mod de;
-pub mod json;
 pub mod ser;
+pub mod json;
+pub mod bson;
 
 #[doc(inline)]
 pub use crate::de::Deserialize;

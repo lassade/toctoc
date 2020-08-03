@@ -1,10 +1,15 @@
-#![feature(test)]
+#[macro_use]
+extern crate criterion;
 
-extern crate test;
+use core::time::Duration;
+use criterion::{BatchSize, Criterion, ParameterizedBenchmark, Throughput, black_box};
 
 use knocknoc::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
 use serde_derive::{Deserialize, Serialize};
-use test::Bencher;
+
+const LEN: usize = 100_000;
+const WARM_UP_TIME: Duration = Duration::from_secs(5);
+const MEASUREMENT_TIME: Duration = Duration::from_secs(55);
 
 fn input_json() -> String {
     std::fs::read_to_string("benches/twitter.json").unwrap()
@@ -15,37 +20,108 @@ fn input_struct() -> Twitter {
     serde_json::from_str(&j).unwrap()
 }
 
-#[bench]
-fn bench_deserialize_knocknoc(b: &mut Bencher) {
-    let j = input_json();
-    b.iter(|| {
-        knocknoc::json::from_str::<Twitter>(&j, None).unwrap();
-    });
+fn cmp(c: &mut Criterion) {
+    let core_ids = core_affinity::get_core_ids().unwrap();
+    core_affinity::set_for_current(core_ids[0]);
+
+    c.bench("ser/json", ParameterizedBenchmark::new(
+        "knocknoc",
+        |b, _| {
+            b.iter_batched(
+                || input_struct(),
+                |value| {
+                    black_box(knocknoc::json::to_string(&value, &()))
+                },
+                BatchSize::NumIterations(LEN as u64),
+            )
+        },
+        vec![()],
+    )
+    .with_function("serde_json", |b, _| {
+        b.iter_batched(
+            || input_struct(),
+            |value| {
+                black_box(serde_json::to_string(&value).unwrap())
+            },
+            BatchSize::NumIterations(LEN as u64),
+        )
+    })
+    //.throughput(|d| Throughput::Bytes(d.0.len() as u64))
+    .warm_up_time(WARM_UP_TIME)
+    .measurement_time(MEASUREMENT_TIME));
+
+    c.bench("de/json", ParameterizedBenchmark::new(
+        "knocknoc",
+        |b, data| {
+            b.iter_batched(
+                || data.clone(),
+                |value| {
+                    black_box(knocknoc::json::from_str::<Twitter>(value, &mut ()))
+                },
+                BatchSize::NumIterations(LEN as u64),
+            )
+        },
+        vec![input_json()],
+    )
+    .with_function("serde_json", |b, data| {
+        b.iter_batched(
+            || data.clone(),
+            |value| {
+                black_box(serde_json::from_str::<Twitter>(&value).unwrap())
+            },
+            BatchSize::NumIterations(LEN as u64),
+        )
+    })
+    .with_function("simd-json", |b, data| {
+        b.iter_batched(
+            || data.clone(),
+            |mut value| {
+                black_box(simd_json::serde::from_str::<Twitter>(&mut value).unwrap())
+            },
+            BatchSize::NumIterations(LEN as u64),
+        )
+    })
+    .throughput(|d| Throughput::Bytes(d.len() as u64))
+    .warm_up_time(WARM_UP_TIME)
+    .measurement_time(MEASUREMENT_TIME));
+
+    c.bench("ser/bson", ParameterizedBenchmark::new(
+        "knocknoc",
+        |b, _| {
+            b.iter_batched(
+                || input_struct(),
+                |value| {
+                    black_box(knocknoc::bson::to_bin(&value, &mut ()))
+                },
+                BatchSize::NumIterations(LEN as u64),
+            )
+        },
+        vec![()],
+    )
+    //.throughput(|d| Throughput::Bytes(d.0.len() as u64))
+    .warm_up_time(WARM_UP_TIME)
+    .measurement_time(MEASUREMENT_TIME));
+
+    c.bench("de/bson", ParameterizedBenchmark::new(
+        "knocknoc",
+        |b, data| {
+            b.iter_batched(
+                || data,
+                |value| {
+                    black_box(knocknoc::bson::from_bin::<Twitter>(value, &mut ()))
+                },
+                BatchSize::NumIterations(LEN as u64),
+            )
+        },
+        vec![knocknoc::bson::to_bin(&input_struct(), &())],
+    )
+    .throughput(|d| Throughput::Bytes(d.len() as u64))
+    .warm_up_time(WARM_UP_TIME)
+    .measurement_time(MEASUREMENT_TIME));
 }
 
-#[bench]
-fn bench_deserialize_serdejson(b: &mut Bencher) {
-    let j = input_json();
-    b.iter(|| {
-        serde_json::from_str::<Twitter>(&j).unwrap();
-    });
-}
-
-#[bench]
-fn bench_serialize_knocknoc(b: &mut Bencher) {
-    let s = input_struct();
-    b.iter(|| {
-        knocknoc::json::to_string(&s, None);
-    });
-}
-
-#[bench]
-fn bench_serialize_serdejson(b: &mut Bencher) {
-    let s = input_struct();
-    b.iter(|| {
-        serde_json::to_string(&s).unwrap();
-    });
-}
+criterion_group!(benches, cmp);
+criterion_main!(benches);
 
 #[derive(Serialize, MiniSerialize, Deserialize, MiniDeserialize)]
 struct Twitter {

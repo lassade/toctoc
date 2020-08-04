@@ -83,15 +83,27 @@ impl<'a, 'b>  Deserializer<'a, 'b> {
 
     /// Reads a sequence of bytes until find a '\0' then return it as str
     fn read_cstring(&mut self) -> Result<&'a str> {
-        let length = self.buffer.iter()
-            .position(|byte| *byte == 0)
-            .ok_or(Error)?;
+        for (mut i, byte) in self.buffer.iter().copied().enumerate() {
+            if byte != 0 { continue }
+            if !byte.is_ascii() { break; }
 
-        let (buf, rem) = self.buffer.split_at(length);
-        // Plus 1 because we don't need the '\0' string terminator
-        self.buffer = &rem[1..];
-        self.index += length + 1;
-        Ok(str::from_utf8(buf).map_err(|_| Error)?)
+            unsafe { 
+                let ptr = self.buffer.as_ptr();
+                let buf = std::slice::from_raw_parts(ptr, i);
+
+                // Plus 1 because we don't need the '\0' string terminator
+                i += 1;
+                self.buffer = std::slice::from_raw_parts(
+                    ptr.add(i), 
+                    self.buffer.len() - i);
+                self.index += i;
+
+                // Not an utf8 string, but an ascii sequence
+                return Ok(str::from_utf8_unchecked(buf));
+            }
+        }
+
+        Err(Error)
     }
 }
 
@@ -150,6 +162,8 @@ fn from_bin_impl(buffer: &[u8], mut visitor: &mut dyn Visitor, context: &mut dyn
             },
             0x02 => {
                 let size = de.read_u32()?;
+                // ! TODO: `str::from_utf8` is too mutch expensive and take a lot of cycles!
+                // ! give a look at `lookup4` utf8 validator and `faster-utf8-validator-rs`
                 let s = str::from_utf8(de.read_bytes(size as usize)?)
                     .map_err(|_| Error)?;
                 de.read_u8()?;

@@ -9,6 +9,10 @@ documentation = "https://docs.rs/knocknoc"
 readme = "README.md"
 edition = "2018"
 
+# [profile.release]
+# debug = true
+# lto = false
+
 [dependencies]
 itoa = "0.4.3"
 knocknoc_internal = { version = "=0.1.13", path = "derive" }

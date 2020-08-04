@@ -81,7 +81,7 @@ fn cmp(c: &mut Criterion) {
             BatchSize::NumIterations(LEN as u64),
         )
     })
-    .throughput(|d| Throughput::Bytes(d.len() as u64))
+    .throughput(|d| Throughput::Bytes(d.as_bytes().len() as u64))
     .warm_up_time(WARM_UP_TIME)
     .measurement_time(MEASUREMENT_TIME));
 

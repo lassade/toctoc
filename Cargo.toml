@@ -20,6 +20,7 @@ ryu = "1.0"
 bintext = { path = "../bintext" }
 simd-json = { version = "0.3.14", default-features = false, features = ["swar-number-parsing"], optional = true }
 paste = "1.0.0"
+faster-utf8-validator = { path = "../faster-utf8-validator-rs" }
 
 [dev-dependencies]
 criterion = "0.3"

@@ -108,7 +108,7 @@ fn cmp(c: &mut Criterion) {
             b.iter_batched(
                 || data,
                 |value| {
-                    black_box(knocknoc::bson::from_bin::<Twitter>(value, &mut ()))
+                    black_box(knocknoc::bson::from_bin::<Twitter>(value, &mut ()).unwrap())
                 },
                 BatchSize::NumIterations(LEN as u64),
             )

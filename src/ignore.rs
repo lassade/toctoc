@@ -22,6 +22,11 @@ impl Visitor for Ignore {
         Ok(())
     }
 
+
+    fn bytes(&mut self, _b: &[u8], _c: &mut dyn Context) -> Result<()> {
+        Ok(())
+    }
+
     fn negative(&mut self, _n: i64, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }

@@ -162,10 +162,12 @@ fn from_bin_impl(buffer: &[u8], mut visitor: &mut dyn Visitor, context: &mut dyn
             },
             0x02 => {
                 let size = de.read_u32()?;
-                // ! TODO: `str::from_utf8` is too mutch expensive and take a lot of cycles!
-                // ! give a look at `lookup4` utf8 validator and `faster-utf8-validator-rs`
-                let s = str::from_utf8(de.read_bytes(size as usize)?)
-                    .map_err(|_| Error)?;
+                // TODO: Maybe implement the `lookup4` algorimth
+                let bytes = de.read_bytes(size as usize)?;
+                if !faster_utf8_validator::validate(bytes) {
+                    Err(Error)?
+                }
+                let s = unsafe { str::from_utf8_unchecked(bytes) };
                 de.read_u8()?;
                 visitor.string(s, context)?;
                 None

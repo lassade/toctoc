@@ -256,7 +256,7 @@ pub trait Visitor<'i> {
         Err(Error)
     }
 
-    fn seq(&mut self, c: &mut dyn Context) -> Result<Box<dyn  + '_>> {
+    fn seq(&mut self, c: &mut dyn Context) -> Result<Box<dyn Seq<'i> + '_>> {
         let _ = c;
         Err(Error)
     }

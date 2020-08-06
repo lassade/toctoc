@@ -207,7 +207,7 @@ pub trait Deserialize<'i> : Sized {
     /// }
     /// # }
     /// ```
-    fn begin<'a>(out: &'a mut Option<Self>) -> &'a mut dyn Visitor<'i>;
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'i>;
 
     // Not public API. This method is only intended for Option<T>, should not
     // need to be implemented outside of this crate.

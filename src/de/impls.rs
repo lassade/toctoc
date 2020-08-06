@@ -323,7 +323,7 @@ impl<'i, T: Deserialize<'i>> Deserialize<'i> for Option<T> {
             fn seq(&mut self, context: &mut dyn Context) -> Result<Box<dyn Seq<'i> + '_>> {
                 self.out = Some(None);
                 let o = self.out.as_mut().unwrap(); // &mut Option<T>
-                let v = careful!(Deserialize::begin(o) as &mut dyn Visitor<'i>);
+                let v: &mut dyn Visitor<'i> = Deserialize::begin(o); // ;
                 v.seq(context) // Result<Box<dyn Seq<'i> + '_>>
             }
 

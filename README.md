@@ -17,7 +17,9 @@ formats may be added in the future (but probably won't).
 
 ### Extra: Bson support (binary json)
 
-TODO
+Bson is like a binary json format. so it's more suitable for binary
+data and also self described, but it doest not gaurantee memory aligment
+for data structures that may requeir it.
 
 ### Extra: Stateful or contextual (de)serialization
 
@@ -33,6 +35,11 @@ By enabling the `simd` feature, json (de)serialization will be done by
 the [simd_json](https://crates.io/crates/simd-json) crate,
 currely fastest (pure rust) json parsing crate avaliable.
 
+### Zero Copy (WIP)
+
+Like serde this lib supports zero copy load, for strings it works like
+intended, for bytes it may require move memory around to match struct
+aligment requeriments, since both json and bson arent zero copy formats.
 
 Miniserde (original)
 =========

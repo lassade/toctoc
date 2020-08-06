@@ -31,21 +31,21 @@ use crate::error::{Error, Result};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_bin<T: Deserialize>(b: &[u8], ctx: &mut dyn Context) -> Result<T> {
+pub fn from_bin<'i, T: Deserialize<'i>>(b: &'i [u8], ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
     from_bin_impl(b, T::begin(&mut out), ctx)?;
     out.ok_or(Error)
 }
 
 enum Layer<'a> {
-    Seq(Box<dyn Seq + 'a>),
-    Map(Box<dyn Map + 'a>),
+    Seq(Box<dyn Seq<'a> + 'a>),
+    Map(Box<dyn Map<'a> + 'a>),
 }
 
 struct Deserializer<'a, 'b> {
     buffer: &'a [u8],
     index: usize,
-    stack: Vec<(&'b mut dyn Visitor, Layer<'b>, usize)>,
+    stack: Vec<(&'b mut dyn Visitor<'a>, Layer<'b>, usize)>,
 }
 
 macro_rules! read_byte_impl {
@@ -116,7 +116,7 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_bin_impl(buffer: &[u8], mut visitor: &mut dyn Visitor, context: &mut dyn Context) -> Result<()> {
+fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, context: &mut dyn Context) -> Result<()> {
     let mut de = Deserializer {
         buffer,
         index: 0,

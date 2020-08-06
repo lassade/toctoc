@@ -10,7 +10,8 @@ fn test_round_trip_deeply_nested() {
         j.push_str("]}");
     }
 
-    let value: Value = json::from_str(&j, &mut ()).unwrap();
+    let mut jc = j.clone();
+    let value: Value = json::from_str(&mut jc, &mut ()).unwrap();
     let j2 = json::to_string(&value, &());
     assert_eq!(j, j2);
 }

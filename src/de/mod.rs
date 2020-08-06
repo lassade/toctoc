@@ -190,7 +190,7 @@ use crate::export::{Asset, Entity};
 /// Trait for data structures that can be deserialized from a JSON string.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Deserialize: Sized {
+pub trait Deserialize<'i> : Sized {
     /// The only correct implementation of this method is:
     ///
     /// ```rust
@@ -207,7 +207,7 @@ pub trait Deserialize: Sized {
     /// }
     /// # }
     /// ```
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor;
+    fn begin<'a>(out: &'a mut Option<Self>) -> &'a mut dyn Visitor<'i>;
 
     // Not public API. This method is only intended for Option<T>, should not
     // need to be implemented outside of this crate.
@@ -222,7 +222,7 @@ pub trait Deserialize: Sized {
 /// Trait that can write data into an output place.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Visitor {
+pub trait Visitor<'i> {
     fn null(&mut self, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         Err(Error)
@@ -233,7 +233,7 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn string(&mut self, s: &str, c: &mut dyn Context) -> Result<()> {
+    fn string(&mut self, s: &'i str, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = s;
         Err(Error)
@@ -256,12 +256,12 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn seq(&mut self, c: &mut dyn Context) -> Result<Box<dyn Seq + '_>> {
+    fn seq(&mut self, c: &mut dyn Context) -> Result<Box<dyn  + '_>> {
         let _ = c;
         Err(Error)
     }
     
-    fn map(&mut self, c: &mut dyn Context) -> Result<Box<dyn Map + '_>> {
+    fn map(&mut self, c: &mut dyn Context) -> Result<Box<dyn Map<'i> + '_>> {
         let _ = c;
         Err(Error)
     }
@@ -272,7 +272,7 @@ pub trait Visitor {
         Err(Error)
     }
 
-    fn bytes(&mut self, b: &[u8], c: &mut dyn Context) -> Result<()> {
+    fn bytes(&mut self, b: &'i [u8], c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = b;
         Err(Error)
@@ -282,16 +282,16 @@ pub trait Visitor {
 /// Trait that can hand out places to write sequence elements.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Seq {
-    fn element(&mut self) -> Result<&mut dyn Visitor>;
+pub trait Seq<'i> {
+    fn element(&mut self) -> Result<&mut dyn Visitor<'i>>;
     fn finish(&mut self) -> Result<()>;
 }
 
 /// Trait that can hand out places to write values of a map.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Map {
-    fn key(&mut self, k: &str) -> Result<&mut dyn Visitor>;
+pub trait Map<'i> {
+    fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'i>>;
     fn finish(&mut self) -> Result<()>;
 }
 

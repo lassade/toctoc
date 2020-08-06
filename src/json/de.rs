@@ -27,7 +27,7 @@ use crate::error::{Error, Result};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<T: Deserialize>(j: &str, ctx: &mut dyn Context) -> Result<T> {
+pub fn from_str<T: Deserialize>(j: &mut str, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
     from_str_impl(j, T::begin(&mut out), ctx)?;
     out.ok_or(Error)
@@ -54,7 +54,7 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, context: &mut dyn Context) -> Result<()> {
+fn from_str_impl<'i>(j: &mut str, mut visitor: &mut dyn Visitor<'i>, context: &mut dyn Context) -> Result<()> {
     let mut de = Deserializer {
         input: j.as_bytes(),
         pos: 0,
@@ -88,7 +88,9 @@ fn from_str_impl(j: &str, mut visitor: &mut dyn Visitor, context: &mut dyn Conte
                 if s.chars().last() == Some(HEX_HINT) {
                     let c = s.len() - 1;
                     let b = bintext::hex::decode(&s[..c]).map_err(|_| Error)?;
-                    visitor.bytes(b.as_slice(), context)?;
+                    // TODO: Copy the bytes into the string
+                    //visitor.bytes(b.as_slice(), context)?;
+                    todo!()
                 } else {
                     visitor.string(s, context)?;
                 }

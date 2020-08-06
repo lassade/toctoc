@@ -15,9 +15,9 @@ impl Serialize for Bytes {
 
 knocknoc::make_place!(Place);
 
-impl Deserialize for Bytes {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
-        impl Visitor for Place<Bytes> {
+impl<'i> Deserialize<'i> for Bytes {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'i> {
+        impl<'i> Visitor<'i> for Place<Bytes> {
             fn bytes(&mut self, b: &[u8], _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Bytes(b.to_vec()));
                 Ok(())
@@ -39,7 +39,7 @@ fn test_binhint() {
     }
 
     for (expected, val) in cases {
-        let actual: Bytes = json::from_str(*val, &mut ()).unwrap();
+        let actual: Bytes = json::from_str(&mut val.to_string(), &mut ()).unwrap();
         assert_eq!(actual, *expected);
     }
 }

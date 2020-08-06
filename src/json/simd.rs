@@ -17,30 +17,30 @@ use simd_json::{Node, StaticNode};
 /// }
 ///
 /// fn main() -> knocknoc::Result<()> {
-///     let j = r#" {"code": 200, "message": "reminiscent of Serde"} "#;
+///     let j = r#" {"code": 200, "message": "reminiscent of Serde"} "#.to_string();
 ///
-///     let out: Example = json::from_str(j.to_string(), &mut ())?;
+///     let out: Example = json::from_str(&mut j, &mut ())?;
 ///     println!("{:?}", out);
 ///
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<T: Deserialize>(j: String, ctx: &mut dyn Context) -> Result<T> {
+pub fn from_str<'i, T: Deserialize<'i>>(j: &'i mut str, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    let mut bytes = j.into_bytes();
-    from_str_impl(&mut bytes, T::begin(&mut out), ctx)?;
+    let bytes = unsafe { j.as_bytes_mut() };
+    from_str_impl(bytes, T::begin(&mut out), ctx)?;
     out.ok_or(Error)
 }
 
 enum Layer<'a> {
-    Seq(Box<dyn Seq + 'a>),
-    Map(Box<dyn Map + 'a>),
+    Seq(Box<dyn Seq<'a> + 'a>),
+    Map(Box<dyn Map<'a> + 'a>),
 }
 
 struct Deserializer<'a, 'b> {
     i: usize,
     tape: Vec<Node<'a>>,
-    stack: Vec<(&'b mut dyn Visitor, Layer<'b>, usize)>,
+    stack: Vec<(&'b mut dyn Visitor<'a>, Layer<'b>, usize)>,
 }
 
 impl<'a, 'b> Iterator for Deserializer<'a, 'b> {
@@ -62,7 +62,7 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_str_impl(j: &mut [u8], mut visitor: &mut dyn Visitor, context: &mut dyn Context) -> Result<()> {
+fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context: &mut dyn Context) -> Result<()> {
     use Node::*;
     use StaticNode::*;
 
@@ -97,8 +97,10 @@ fn from_str_impl(j: &mut [u8], mut visitor: &mut dyn Visitor, context: &mut dyn 
             Some(String(s)) => {
                 if s.chars().last() == Some(HEX_HINT) {
                     let c = s.len() - 1;
+                    // TODO: replace bytes on the string
                     let b = bintext::hex::decode(&s[..c]).map_err(|_| Error)?;
-                    visitor.bytes(b.as_slice(), context)?;
+                    //visitor.bytes(b, context)?;
+                    todo!()
                 } else {
                     visitor.string(s, context)?;
                 }

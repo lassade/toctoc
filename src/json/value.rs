@@ -25,24 +25,24 @@ use crate::Place;
 /// // no stack overflow when `value` goes out of scope
 /// ```
 #[derive(Clone, Debug)]
-pub enum Value {
+pub enum Value<'i> {
     Null,
     Bool(bool),
     Number(Number),
-    String(String),
-    Binary(Vec<u8>), // * MOD: Byte support
-    Array(Array),
-    Object(Object),
+    String(Cow<'i, str>),
+    Binary(Cow<'i, [u8]>), // * MOD: Byte support
+    Array(Array<'i>),
+    Object(Object<'i>),
 }
 
-impl Default for Value {
+impl<'i> Default for Value<'i> {
     /// The default value is null.
     fn default() -> Self {
         Value::Null
     }
 }
 
-impl Serialize for Value {
+impl<'i> Serialize for Value<'i> {
     fn begin(&self, _c: &dyn ser::Context) -> Fragment {
         match self {
             Value::Null => Fragment::Null,
@@ -51,7 +51,7 @@ impl Serialize for Value {
             Value::Number(Number::I64(n)) => Fragment::I64(*n),
             Value::Number(Number::F32(n)) => Fragment::F32(*n), // * MOD: f32 support
             Value::Number(Number::F64(n)) => Fragment::F64(*n),
-            Value::Binary(b) => Fragment::Bin(Cow::Borrowed(b.as_slice())), // * MOD: binary data support
+            Value::Binary(b) => Fragment::Bin(Cow::Borrowed(b)), // * MOD: binary data support
             Value::String(s) => Fragment::Str(Cow::Borrowed(s)),
             Value::Array(array) => private::stream_slice(array),
             Value::Object(object) => private::stream_object(object),
@@ -59,9 +59,9 @@ impl Serialize for Value {
     }
 }
 
-impl Deserialize for Value {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
-        impl Visitor for Place<Value> {
+impl<'i> Deserialize<'i> for Value<'i> {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'i> {
+        impl<'i> Visitor<'i> for Place<Value<'i>> {
             fn null(&mut self, _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::Null);
                 Ok(())
@@ -72,8 +72,8 @@ impl Deserialize for Value {
                 Ok(())
             }
 
-            fn string(&mut self, s: &str, _c: &mut dyn de::Context) -> Result<()> {
-                self.out = Some(Value::String(s.to_owned()));
+            fn string(&mut self, s: &'i str, _c: &mut dyn de::Context) -> Result<()> {
+                self.out = Some(Value::String(Cow::Borrowed(s)));
                 Ok(())
             }
 
@@ -92,7 +92,7 @@ impl Deserialize for Value {
                 Ok(())
             }
 
-            fn seq(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Seq + '_>> {
+            fn seq(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Seq<'i> + '_>> {
                 Ok(Box::new(ArrayBuilder {
                     out: &mut self.out,
                     array: Array::new(),
@@ -100,7 +100,7 @@ impl Deserialize for Value {
                 }))
             }
 
-            fn map(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Map + '_>> {
+            fn map(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Map<'i> + '_>> {
                 Ok(Box::new(ObjectBuilder {
                     out: &mut self.out,
                     object: Object::new(),
@@ -114,19 +114,19 @@ impl Deserialize for Value {
                 Ok(())
             }
         
-            fn bytes(&mut self, b: &[u8], _c: &mut dyn de::Context) -> Result<()> {
-                self.out = Some(Value::Binary(b.to_owned()));
+            fn bytes(&mut self, b: &'i [u8], _c: &mut dyn de::Context) -> Result<()> {
+                self.out = Some(Value::Binary(Cow::Borrowed(b)));
                 Ok(())
             }
         }
 
-        struct ArrayBuilder<'a> {
-            out: &'a mut Option<Value>,
-            array: Array,
-            element: Option<Value>,
+        struct ArrayBuilder<'a, 'i> {
+            out: &'a mut Option<Value<'i>>,
+            array: Array<'i>,
+            element: Option<Value<'i>>,
         }
 
-        impl<'a> ArrayBuilder<'a> {
+        impl<'a, 'i> ArrayBuilder<'a, 'i> {
             fn shift(&mut self) {
                 if let Some(e) = self.element.take() {
                     self.array.push(e);
@@ -134,8 +134,8 @@ impl Deserialize for Value {
             }
         }
 
-        impl<'a> Seq for ArrayBuilder<'a> {
-            fn element(&mut self) -> Result<&mut dyn Visitor> {
+        impl<'a, 'i> Seq<'i> for ArrayBuilder<'a, 'i> {
+            fn element(&mut self) -> Result<&mut dyn Visitor<'i>> {
                 self.shift();
                 Ok(Deserialize::begin(&mut self.element))
             }
@@ -147,14 +147,14 @@ impl Deserialize for Value {
             }
         }
 
-        struct ObjectBuilder<'a> {
-            out: &'a mut Option<Value>,
-            object: Object,
+        struct ObjectBuilder<'a, 'i> {
+            out: &'a mut Option<Value<'i>>,
+            object: Object<'i>,
             key: Option<String>,
-            value: Option<Value>,
+            value: Option<Value<'i>>,
         }
 
-        impl<'a> ObjectBuilder<'a> {
+        impl<'a, 'i> ObjectBuilder<'a, 'i> {
             fn shift(&mut self) {
                 if let (Some(k), Some(v)) = (self.key.take(), self.value.take()) {
                     self.object.insert(k, v);
@@ -162,8 +162,8 @@ impl Deserialize for Value {
             }
         }
 
-        impl<'a> Map for ObjectBuilder<'a> {
-            fn key(&mut self, k: &str) -> Result<&mut dyn Visitor> {
+        impl<'a, 'i> Map<'i> for ObjectBuilder<'a, 'i> {
+            fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'i>> {
                 self.shift();
                 self.key = Some(k.to_owned());
                 Ok(Deserialize::begin(&mut self.value))
@@ -176,16 +176,17 @@ impl Deserialize for Value {
             }
         }
 
+        // ! FIXME: Highly unsafe this will remove
         Place::new(out)
     }
 }
 
-impl Value {
+impl<'i> Value<'i> {
     /// Converts a hex string into binary data
     pub fn from_hex(&mut self) -> Result<()> {
         match self {
             Value::String(ref s) =>
-                *self = Value::Binary(bintext::hex::decode_no(s).map_err(|_| Error)?),
+                *self = Value::Binary(Cow::Owned(bintext::hex::decode_no(s).map_err(|_| Error)?)),
             _ => { return Err(Error); }
         }
         Ok(())

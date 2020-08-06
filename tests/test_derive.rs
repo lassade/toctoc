@@ -23,8 +23,8 @@ struct Nested {
 
 #[test]
 fn test_de() {
-    let j = r#" {"x": "X", "t1": "A", "t2": "renamedB", "n": {"y": ["Y", "Y"]}} "#;
-    let actual: Example = json::from_str(j, &mut ()).unwrap();
+    let mut j = r#" {"x": "X", "t1": "A", "t2": "renamedB", "n": {"y": ["Y", "Y"]}} "#.to_string();
+    let actual: Example = json::from_str(&mut j, &mut ()).unwrap();
     let expected = Example {
         x: "X".to_owned(),
         t1: Tag::A,

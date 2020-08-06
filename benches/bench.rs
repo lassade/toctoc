@@ -56,7 +56,7 @@ fn cmp(c: &mut Criterion) {
             b.iter_batched(
                 || data.clone(),
                 |value| {
-                    black_box(knocknoc::json::from_str::<Twitter>(value, &mut ()))
+                    black_box(knocknoc::json::from_str::<Twitter>(&mut value, &mut ()))
                 },
                 BatchSize::NumIterations(LEN as u64),
             )
@@ -106,9 +106,9 @@ fn cmp(c: &mut Criterion) {
         "knocknoc",
         |b, data| {
             b.iter_batched(
-                || data,
+                || data.clone(),
                 |value| {
-                    black_box(knocknoc::bson::from_bin::<Twitter>(value, &mut ()).unwrap())
+                    black_box(knocknoc::bson::from_bin::<Twitter>(&value, &mut ()).unwrap())
                 },
                 BatchSize::NumIterations(LEN as u64),
             )

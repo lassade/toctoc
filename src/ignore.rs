@@ -1,15 +1,15 @@
 use crate::de::{Map, Seq, Visitor, Context};
 use crate::error::Result;
 
-impl dyn Visitor {
-    pub fn ignore() -> &'static mut dyn Visitor {
+impl<'i> dyn Visitor<'i> {
+    pub fn ignore<'a>() -> &'a mut dyn Visitor<'i> {
         careful!(&mut Ignore as &mut Ignore)
     }
 }
 
 struct Ignore;
 
-impl Visitor for Ignore {
+impl<'i> Visitor<'i> for Ignore {
     fn null(&mut self, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
@@ -18,12 +18,12 @@ impl Visitor for Ignore {
         Ok(())
     }
 
-    fn string(&mut self, _s: &str, _c: &mut dyn Context) -> Result<()> {
+    fn string(&mut self, _s: &'i str, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 
 
-    fn bytes(&mut self, _b: &[u8], _c: &mut dyn Context) -> Result<()> {
+    fn bytes(&mut self, _b: &'i [u8], _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 
@@ -43,18 +43,18 @@ impl Visitor for Ignore {
         Ok(())
     }
 
-    fn seq(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Seq + '_>> {
+    fn seq(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Seq<'i> + '_>> {
         Ok(Box::new(Ignore))
     }
 
-    fn map(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Map + '_>> {
+    fn map(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Map<'i> + '_>> {
         Ok(Box::new(Ignore))
     }
 }
 
-impl Seq for Ignore {
-    fn element(&mut self) -> Result<&mut dyn Visitor> {
-        Ok(Visitor::ignore())
+impl<'i> Seq<'i> for Ignore {
+    fn element(&mut self) -> Result<&mut dyn Visitor<'i>> {
+        Ok(careful!(&mut Ignore as &mut Ignore))
     }
 
     fn finish(&mut self) -> Result<()> {
@@ -62,9 +62,9 @@ impl Seq for Ignore {
     }
 }
 
-impl Map for Ignore {
-    fn key(&mut self, _k: &str) -> Result<&mut dyn Visitor> {
-        Ok(Visitor::ignore())
+impl<'i> Map<'i> for Ignore {
+    fn key(&mut self, _k: &str) -> Result<&mut dyn Visitor<'i>> {
+        Ok(careful!(&mut Ignore as &mut Ignore))
     }
 
     fn finish(&mut self) -> Result<()> {

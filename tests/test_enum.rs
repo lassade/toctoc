@@ -99,9 +99,9 @@ impl Serialize for E {
 
 knocknoc::make_place!(Place);
 
-impl Deserialize for E {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
-        impl Visitor for Place<E> {
+impl<'__i> Deserialize<'__i> for E {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'__i> {
+        impl<'__i> Visitor<'__i> for Place<E> {
             fn string(&mut self, s: &str, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                 match s {
                     "Z" => { self.out = Some(E::Z); Ok(()) },
@@ -109,7 +109,7 @@ impl Deserialize for E {
                 }
             }
         
-            fn map(&mut self, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<Box<dyn knocknoc::de::Map + '_>> {
+            fn map(&mut self, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<Box<dyn knocknoc::de::Map<'__i> + '_>> {
                 #[derive(knocknoc::Deserialize)]
                 struct W {
                     a: i32, b: i32,
@@ -129,8 +129,8 @@ impl Deserialize for E {
                     __out: &'__a mut knocknoc::export::Option<E>,
                 }
     
-                impl<'__a> knocknoc::de::Map for __State<'__a> {
-                    fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor> {
+                impl<'__a, '__i> knocknoc::de::Map<'__i> for __State<'__a> {
+                    fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor<'__i>> {
                         if self.state != __Var::None {
                             knocknoc::export::Ok(knocknoc::de::Visitor::ignore())
                         } else {
@@ -191,7 +191,8 @@ fn test_enum() {
     }
 
     for (expected, val) in cases {
-        let actual: E = json::from_str(*val, &mut ()).unwrap();
+        let mut val = val.to_string();
+        let actual: E = json::from_str(&mut val, &mut ()).unwrap();
         assert_eq!(actual, *expected);
     }
 }

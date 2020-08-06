@@ -27,7 +27,7 @@ use crate::error::{Error, Result};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<T: Deserialize>(j: &mut str, ctx: &mut dyn Context) -> Result<T> {
+pub fn from_str<'i, T: Deserialize<'i>>(j: &'i mut str, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
     from_str_impl(j, T::begin(&mut out), ctx)?;
     out.ok_or(Error)
@@ -54,7 +54,7 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_str_impl<'i>(j: &mut str, mut visitor: &mut dyn Visitor<'i>, context: &mut dyn Context) -> Result<()> {
+fn from_str_impl<'i>(j: &'i mut str, mut visitor: &mut dyn Visitor<'i>, context: &mut dyn Context) -> Result<()> {
     let mut de = Deserializer {
         input: j.as_bytes(),
         pos: 0,
@@ -92,7 +92,9 @@ fn from_str_impl<'i>(j: &mut str, mut visitor: &mut dyn Visitor<'i>, context: &m
                     //visitor.bytes(b.as_slice(), context)?;
                     todo!()
                 } else {
-                    visitor.string(s, context)?;
+                    // TODO Scape bytes inside the input string 
+                    //visitor.string(s, context)?;
+                    todo!()
                 }
                 None
             }

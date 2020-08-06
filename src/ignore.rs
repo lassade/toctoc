@@ -43,11 +43,17 @@ impl<'i> Visitor<'i> for Ignore {
         Ok(())
     }
 
-    fn seq(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Seq<'i> + '_>> {
+    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'i> + 'a>> 
+    where
+        'i: 'a
+    {
         Ok(Box::new(Ignore))
     }
 
-    fn map(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Map<'i> + '_>> {
+    fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'i> + 'a>>
+    where
+        'i: 'a
+    {
         Ok(Box::new(Ignore))
     }
 }
@@ -57,7 +63,7 @@ impl<'i> Seq<'i> for Ignore {
         Ok(careful!(&mut Ignore as &mut Ignore))
     }
 
-    fn finish(&mut self) -> Result<()> {
+    fn finish(&mut self, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 }
@@ -67,7 +73,7 @@ impl<'i> Map<'i> for Ignore {
         Ok(careful!(&mut Ignore as &mut Ignore))
     }
 
-    fn finish(&mut self) -> Result<()> {
+    fn finish(&mut self, _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
 }

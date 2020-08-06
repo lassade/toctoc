@@ -92,7 +92,10 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 Ok(())
             }
 
-            fn seq(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Seq<'i> + '_>> {
+            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'i> + 'a>> 
+            where
+                'i: 'a
+            {
                 Ok(Box::new(ArrayBuilder {
                     out: &mut self.out,
                     array: Array::new(),
@@ -100,7 +103,10 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 }))
             }
 
-            fn map(&mut self, _c: &mut dyn de::Context) -> Result<Box<dyn Map<'i> + '_>> {
+            fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'i> + 'a>>
+            where
+                'i: 'a
+            {
                 Ok(Box::new(ObjectBuilder {
                     out: &mut self.out,
                     object: Object::new(),
@@ -140,7 +146,7 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 Ok(Deserialize::begin(&mut self.element))
             }
 
-            fn finish(&mut self) -> Result<()> {
+            fn finish(&mut self, _: &'_ mut dyn de::Context) -> Result<()> {
                 self.shift();
                 *self.out = Some(Value::Array(mem::replace(&mut self.array, Array::new())));
                 Ok(())
@@ -169,7 +175,7 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 Ok(Deserialize::begin(&mut self.value))
             }
 
-            fn finish(&mut self) -> Result<()> {
+            fn finish(&mut self, _: &'_ mut dyn de::Context) -> Result<()> {
                 self.shift();
                 *self.out = Some(Value::Object(mem::replace(&mut self.object, Object::new())));
                 Ok(())

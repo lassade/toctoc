@@ -100,18 +100,18 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
                     // TODO: replace bytes on the string
                     let b = bintext::hex::decode(&s[..c]).map_err(|_| Error)?;
                     //visitor.bytes(b, context)?;
-                    todo!()
+                    todo!("bytes is not current supported!")
                 } else {
                     visitor.string(s, context)?;
                 }
                 None
             },
             Some(Array(_, finish)) => {
-                let seq = careful!(visitor.seq(context)? as Box<dyn Seq>);
+                let seq = careful!(visitor.seq()? as Box<dyn Seq>);
                 Some((Layer::Seq(seq), finish))
             },
             Some(Object(_, finish)) => {
-                let map = careful!(visitor.map(context)? as Box<dyn Map>);
+                let map = careful!(visitor.map()? as Box<dyn Map>);
                 Some((Layer::Map(map), finish))
             },
             _ => None,
@@ -131,8 +131,8 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
         // Frame ended
         while de.i >= finish {
             match &mut layer {
-                Layer::Seq(seq) => seq.finish()?,
-                Layer::Map(map) => map.finish()?,
+                Layer::Seq(seq) => seq.finish(context)?,
+                Layer::Map(map) => map.finish(context)?,
             }
             match de.stack.pop() {
                 Some(frame) => {

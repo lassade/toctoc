@@ -201,13 +201,13 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
                 let size = de.read_i32()?;
                 // Subtract 4 bytes of the size it self and 1 of '\0' (end document)
                 let size = size as usize + de.index - 5;
-                let seq = careful!(visitor.seq(context)? as Box<dyn Seq>);
+                let seq = careful!(visitor.seq()? as Box<dyn Seq>);
                 Some((Layer::Seq(seq), size))
             },
             0x03 => {
                 let size = de.read_i32()?;
                 let size = size as usize + de.index - 5;
-                let map = careful!(visitor.map(context)? as Box<dyn Map>);
+                let map = careful!(visitor.map()? as Box<dyn Map>);
                 Some((Layer::Map(map), size))
             },
             _ => Err(Error)?,
@@ -229,8 +229,8 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
             if de.read_u8()? != 0 { Err(Error)? }
 
             match &mut layer {
-                Layer::Seq(seq) => seq.finish()?,
-                Layer::Map(map) => map.finish()?,
+                Layer::Seq(seq) => seq.finish(context)?,
+                Layer::Map(map) => map.finish(context)?,
             }
             match de.stack.pop() {
                 Some(frame) => {

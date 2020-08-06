@@ -256,13 +256,17 @@ pub trait Visitor<'i> {
         Err(Error)
     }
 
-    fn seq(&mut self, c: &mut dyn Context) -> Result<Box<dyn Seq<'i> + '_>> {
-        let _ = c;
+    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'i> + 'a>> 
+    where
+        'i: 'a
+    {
         Err(Error)
     }
     
-    fn map(&mut self, c: &mut dyn Context) -> Result<Box<dyn Map<'i> + '_>> {
-        let _ = c;
+    fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'i> + 'a>>
+    where
+        'i: 'a
+    {
         Err(Error)
     }
 
@@ -284,7 +288,7 @@ pub trait Visitor<'i> {
 /// [Refer to the module documentation for examples.][::de]
 pub trait Seq<'i> {
     fn element(&mut self) -> Result<&mut dyn Visitor<'i>>;
-    fn finish(&mut self) -> Result<()>;
+    fn finish(&mut self, c: &mut dyn Context) -> Result<()>;
 }
 
 /// Trait that can hand out places to write values of a map.
@@ -292,7 +296,7 @@ pub trait Seq<'i> {
 /// [Refer to the module documentation for examples.][::de]
 pub trait Map<'i> {
     fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'i>>;
-    fn finish(&mut self) -> Result<()>;
+    fn finish(&mut self, c: &mut dyn Context) -> Result<()>;
 }
 
 pub enum Hint<'a> {

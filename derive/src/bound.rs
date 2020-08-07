@@ -36,6 +36,37 @@ pub fn with_lifetime_bound(generics: &Generics, lifetime: &str) -> Generics {
     }
 }
 
+pub fn within_lifetime_bound(generics: &Generics, lifetime: &str) -> Generics {
+    let bound = Lifetime::new(lifetime, Span::call_site());
+    let mut def = LifetimeDef {
+        attrs: Vec::new(),
+        lifetime: bound.clone(),
+        colon_token: None,
+        bounds: Punctuated::new(),
+    };
+
+    def.bounds.extend(
+        generics.params.iter()
+            .filter_map(|mut param| {
+                match &mut param {
+                    GenericParam::Lifetime(param) => Some(&param.lifetime),
+                    _ => None,
+                }
+            })
+            .cloned()
+    );
+
+    let params = generics.params.iter()
+        .cloned()
+        .chain(Some(GenericParam::Lifetime(def)))
+        .collect();
+
+    Generics {
+        params,
+        ..generics.clone()
+    }
+}
+
 pub fn where_clause_with_bound(generics: &Generics, bound: TokenStream) -> WhereClause {
     let new_predicates = generics.type_params().map::<WherePredicate, _>(|param| {
         let param = &param.ident;

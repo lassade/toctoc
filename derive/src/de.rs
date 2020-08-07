@@ -21,7 +21,7 @@ pub fn derive(input: DeriveInput) -> Result<TokenStream> {
 
 pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenStream> {
     let ident = &input.ident;
-    let input_generics = bound::with_lifetime_bound(&input.generics, "'de"); // Add deserialzier lifetime
+    let input_generics = bound::within_lifetime_bound(&input.generics, "'de"); // Add deserialzier lifetime
     let (impl_de_generics, _, _) = input_generics.split_for_impl();
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -66,9 +66,9 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
             }
 
             impl #impl_de_generics knocknoc::de::Visitor<'de> for __Visitor #ty_generics #bounded_where_clause {
-                fn map<'a>(&'a mut self) -> knocknoc::Result<knocknoc::export::Box<dyn knocknoc::de::Map<'de> + 'a>>
+                fn map<'__map>(&'__map mut self) -> knocknoc::Result<knocknoc::export::Box<dyn knocknoc::de::Map<'de> + '__map>>
                 where
-                    'de: 'a
+                    'de: '__map
                 {
                     Ok(knocknoc::export::Box::new(__State {
                         #(

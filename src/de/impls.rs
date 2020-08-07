@@ -36,8 +36,20 @@ impl<'de> Deserialize<'de> for bool {
 impl<'de> Deserialize<'de> for String {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
         impl<'de> Visitor<'de> for Place<String> {
-            fn string(&mut self, s: &str, _c: &mut dyn Context) -> Result<()> {
+            fn string(&mut self, s: &str, _: &mut dyn Context) -> Result<()> {
                 self.out = Some(s.to_owned());
+                Ok(())
+            }
+        }
+        Place::new(out)
+    }
+}
+
+impl<'a, 'de: 'a> Deserialize<'de> for &'a str {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+        impl<'a, 'de: 'a> Visitor<'de> for Place<&'a str> {
+            fn string(&mut self, s: &'de str, _: &mut dyn Context) -> Result<()> {
+                self.out = Some(s);
                 Ok(())
             }
         }

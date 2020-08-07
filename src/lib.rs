@@ -31,10 +31,10 @@
 //!         message: "reminiscent of Serde".to_owned(),
 //!     };
 //!
-//!     let j = json::to_string(&example, &());
+//!     let mut j = json::to_string(&example, &());
 //!     println!("{}", j);
 //!
-//!     let out: Example = json::from_str(&j, &mut ())?;
+//!     let out: Example = json::from_str(&mut j, &mut ())?;
 //!     println!("{:?}", out);
 //!
 //!     Ok(())

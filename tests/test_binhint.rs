@@ -15,9 +15,9 @@ impl Serialize for Bytes {
 
 knocknoc::make_place!(Place);
 
-impl<'i> Deserialize<'i> for Bytes {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'i> {
-        impl<'i> Visitor<'i> for Place<Bytes> {
+impl<'de> Deserialize<'de> for Bytes {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+        impl<'de> Visitor<'de> for Place<Bytes> {
             fn bytes(&mut self, b: &[u8], _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Bytes(b.to_vec()));
                 Ok(())

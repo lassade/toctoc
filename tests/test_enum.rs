@@ -99,9 +99,9 @@ impl Serialize for E {
 
 knocknoc::make_place!(Place);
 
-impl<'__i> Deserialize<'__i> for E {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'__i> {
-        impl<'__i> Visitor<'__i> for Place<E> {
+impl<'de> Deserialize<'de> for E {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+        impl<'de> Visitor<'de> for Place<E> {
             fn string(&mut self, s: &str, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                 match s {
                     "Z" => { self.out = Some(E::Z); Ok(()) },
@@ -109,7 +109,10 @@ impl<'__i> Deserialize<'__i> for E {
                 }
             }
         
-            fn map(&mut self, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<Box<dyn knocknoc::de::Map<'__i> + '_>> {
+            fn map<'a>(&'a mut self) -> knocknoc::Result<Box<dyn knocknoc::de::Map<'de> + 'a>>
+            where
+                'de: 'a
+            {
                 #[derive(knocknoc::Deserialize)]
                 struct W {
                     a: i32, b: i32,
@@ -129,8 +132,8 @@ impl<'__i> Deserialize<'__i> for E {
                     __out: &'__a mut knocknoc::export::Option<E>,
                 }
     
-                impl<'__a, '__i> knocknoc::de::Map<'__i> for __State<'__a> {
-                    fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor<'__i>> {
+                impl<'__a, 'de> knocknoc::de::Map<'de> for __State<'__a> {
+                    fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor<'de>> {
                         if self.state != __Var::None {
                             knocknoc::export::Ok(knocknoc::de::Visitor::ignore())
                         } else {
@@ -152,7 +155,7 @@ impl<'__i> Deserialize<'__i> for E {
                         }
                     }
     
-                    fn finish(&mut self) -> knocknoc::Result<()> {
+                    fn finish(&mut self, _: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                         match self.state {
                             __Var::W => *self.__out = Some(self.W.as_ref().map(|w| E::W { a: w.a, b: w.b }).ok_or(knocknoc::Error)?),
                             __Var::X => *self.__out = Some(self.X.map(|x| E::X(x.0, x.1)).ok_or(knocknoc::Error)?),

@@ -55,7 +55,7 @@ fn cmp(c: &mut Criterion) {
         |b, data| {
             b.iter_batched(
                 || data.clone(),
-                |value| {
+                |mut value| {
                     black_box(knocknoc::json::from_str::<Twitter>(&mut value, &mut ()))
                 },
                 BatchSize::NumIterations(LEN as u64),

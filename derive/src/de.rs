@@ -21,6 +21,9 @@ pub fn derive(input: DeriveInput) -> Result<TokenStream> {
 
 pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenStream> {
     let ident = &input.ident;
+    let input_generics = bound::with_lifetime_bound(&input.generics, "'de"); // Add deserialzier lifetime
+    let (impl_de_generics, _, _) = input_generics.split_for_impl();
+
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let dummy = Ident::new(
         &format!("_IMPL_MINIDESERIALIZE_FOR_{}", ident),
@@ -37,6 +40,8 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
 
     let wrapper_generics = bound::with_lifetime_bound(&input.generics, "'__a");
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
+    let wrapper_generics = bound::with_lifetime_bound(&input_generics, "'__a");
+    let (wrapper_impl_vis_generics, _, _) = wrapper_generics.split_for_impl();
     let bound = parse_quote!(knocknoc::Deserialize);
     let bounded_where_clause = bound::where_clause_with_bound(&input.generics, bound);
 
@@ -48,8 +53,8 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
                 __out: knocknoc::export::Option<#ident #ty_generics>,
             }
 
-            impl #impl_generics knocknoc::Deserialize for #ident #ty_generics #bounded_where_clause {
-                fn begin(__out: &mut knocknoc::export::Option<Self>) -> &mut dyn knocknoc::de::Visitor {
+            impl #impl_de_generics knocknoc::Deserialize<'de> for #ident #ty_generics #bounded_where_clause {
+                fn begin(__out: &mut knocknoc::export::Option<Self>) -> &mut dyn knocknoc::de::Visitor<'de> {
                     unsafe {
                         &mut *{
                             __out
@@ -60,8 +65,11 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
                 }
             }
 
-            impl #impl_generics knocknoc::de::Visitor for __Visitor #ty_generics #bounded_where_clause {
-                fn map(&mut self, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<knocknoc::export::Box<dyn knocknoc::de::Map + '_>> {
+            impl #impl_de_generics knocknoc::de::Visitor<'de> for __Visitor #ty_generics #bounded_where_clause {
+                fn map<'a>(&'a mut self) -> knocknoc::Result<knocknoc::export::Box<dyn knocknoc::de::Map<'de> + 'a>>
+                where
+                    'de: 'a
+                {
                     Ok(knocknoc::export::Box::new(__State {
                         #(
                             #fieldname: knocknoc::Deserialize::default(),
@@ -78,8 +86,8 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
                 __out: &'__a mut knocknoc::export::Option<#ident #ty_generics>,
             }
 
-            impl #wrapper_impl_generics knocknoc::de::Map for __State #wrapper_ty_generics #bounded_where_clause {
-                fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor> {
+            impl #wrapper_impl_vis_generics knocknoc::de::Map<'de> for __State #wrapper_ty_generics #bounded_where_clause {
+                fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor<'de>> {
                     match __k {
                         #(
                             #fieldstr => knocknoc::export::Ok(knocknoc::Deserialize::begin(&mut self.#fieldname)),
@@ -88,7 +96,7 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
                     }
                 }
 
-                fn finish(&mut self) -> knocknoc::Result<()> {
+                fn finish(&mut self, _: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                     #(
                         let #fieldname = self.#fieldname.take().ok_or(knocknoc::Error)?;
                     )*
@@ -143,8 +151,8 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenS
                 __out: knocknoc::export::Option<#ident>,
             }
 
-            impl knocknoc::Deserialize for #ident {
-                fn begin(__out: &mut knocknoc::export::Option<Self>) -> &mut dyn knocknoc::de::Visitor {
+            impl<'de> knocknoc::Deserialize<'de> for #ident {
+                fn begin(__out: &mut knocknoc::export::Option<Self>) -> &mut dyn knocknoc::de::Visitor<'de> {
                     unsafe {
                         &mut *{
                             __out
@@ -155,8 +163,8 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenS
                 }
             }
 
-            impl knocknoc::de::Visitor for __Visitor {
-                fn string(&mut self, s: &knocknoc::export::str, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
+            impl<'de> knocknoc::de::Visitor<'de> for __Visitor {
+                fn string(&mut self, s: &'de knocknoc::export::str, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                     let value = match s {
                         #( #names => #ident::#var_idents, )*
                         _ => { return knocknoc::export::Err(knocknoc::Error) },

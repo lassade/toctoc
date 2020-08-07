@@ -31,7 +31,7 @@ use crate::error::{Error, Result};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_bin<'i, T: Deserialize<'i>>(b: &'i [u8], ctx: &mut dyn Context) -> Result<T> {
+pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
     from_bin_impl(b, T::begin(&mut out), ctx)?;
     out.ok_or(Error)

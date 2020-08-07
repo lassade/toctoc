@@ -17,7 +17,7 @@ use simd_json::{Node, StaticNode};
 /// }
 ///
 /// fn main() -> knocknoc::Result<()> {
-///     let j = r#" {"code": 200, "message": "reminiscent of Serde"} "#.to_string();
+///     let mut j = r#" {"code": 200, "message": "reminiscent of Serde"} "#.to_string();
 ///
 ///     let out: Example = json::from_str(&mut j, &mut ())?;
 ///     println!("{:?}", out);
@@ -25,7 +25,7 @@ use simd_json::{Node, StaticNode};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<'i, T: Deserialize<'i>>(j: &'i mut str, ctx: &mut dyn Context) -> Result<T> {
+pub fn from_str<'de, T: Deserialize<'de>>(j: &'de mut str, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
     let bytes = unsafe { j.as_bytes_mut() };
     from_str_impl(bytes, T::begin(&mut out), ctx)?;

@@ -37,15 +37,15 @@
 //! // output place.
 //! //
 //! // These methods may perform validation and decide to return an error.
-//! impl Visitor for Place<MyBoolean> {
+//! impl<'de> Visitor<'de> for Place<MyBoolean> {
 //!     fn boolean(&mut self, b: bool) -> Result<()> {
 //!         self.out = Some(MyBoolean(b));
 //!         Ok(())
 //!     }
 //! }
 //!
-//! impl Deserialize for MyBoolean {
-//!     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
+//! impl<'de> Deserialize<'de> for MyBoolean {
+//!     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
 //!         // All Deserialize impls will look exactly like this. There is no
 //!         // other correct implementation of Deserialize.
 //!         Place::new(out)
@@ -67,8 +67,11 @@
 //!
 //! struct MyVec<T>(Vec<T>);
 //!
-//! impl<T: Deserialize> Visitor for Place<MyVec<T>> {
-//!     fn seq(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Seq + '_>> {
+//! impl<'de, T: Deserialize<'de>> Visitor<'de> for Place<MyVec<T>> {
+//!     fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+//!     where
+//!         'de: 'a
+//!     {
 //!         Ok(Box::new(VecBuilder {
 //!             out: &mut self.out,
 //!             vec: Vec::new(),
@@ -86,8 +89,8 @@
 //!     element: Option<T>,
 //! }
 //!
-//! impl<'a, T: Deserialize> Seq for VecBuilder<'a, T> {
-//!     fn element(&mut self) -> Result<&mut dyn Visitor> {
+//! impl<'a, 'de: 'a, T: Deserialize<'de>> Seq<'de> for VecBuilder<'a, T> {
+//!     fn element(&mut self) -> Result<&mut dyn Visitor<'de>> {
 //!         // Free up the place by transfering the most recent element
 //!         // into self.vec.
 //!         self.vec.extend(self.element.take());
@@ -95,7 +98,7 @@
 //!         Ok(Deserialize::begin(&mut self.element))
 //!     }
 //!
-//!     fn finish(&mut self) -> Result<()> {
+//!     fn finish(&mut self, _: &mut dyn Context) -> Result<()> {
 //!         // Transfer the last element.
 //!         self.vec.extend(self.element.take());
 //!         // Move the output object into self.out.
@@ -105,8 +108,8 @@
 //!     }
 //! }
 //!
-//! impl<T: Deserialize> Deserialize for MyVec<T> {
-//!     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
+//! impl<'de, T: Deserialize<'de>> Deserialize<'de> for MyVec<T> {
+//!     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
 //!         // As mentioned, all Deserialize impls will look like this.
 //!         Place::new(out)
 //!     }
@@ -130,8 +133,11 @@
 //!     message: String,
 //! }
 //!
-//! impl Visitor for Place<Demo> {
-//!     fn map(&mut self, _c: &mut dyn Context) -> Result<Box<dyn Map + '_>> {
+//! impl<'de> Visitor<'de> for Place<Demo> {
+//!     fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
+//!     where
+//!         'de: 'a
+//!     {
 //!         // Like for sequences, we produce a builder that can hand out places
 //!         // to write one struct field at a time.
 //!         Ok(Box::new(DemoBuilder {
@@ -148,8 +154,8 @@
 //!     out: &'a mut Option<Demo>,
 //! }
 //!
-//! impl<'a> Map for DemoBuilder<'a> {
-//!     fn key(&mut self, k: &str) -> Result<&mut dyn Visitor> {
+//! impl<'a, 'de: 'a> Map<'de> for DemoBuilder<'a> {
+//!     fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>> {
 //!         // Figure out which field is being deserialized and return a place
 //!         // to write it.
 //!         //
@@ -164,7 +170,7 @@
 //!         }
 //!     }
 //!
-//!     fn finish(&mut self) -> Result<()> {
+//!     fn finish(&mut self, _: &mut dyn Context) -> Result<()> {
 //!         // Make sure we have every field and then write the output object
 //!         // into self.out.
 //!         let code = self.code.take().ok_or(knocknoc::Error)?;
@@ -174,8 +180,8 @@
 //!     }
 //! }
 //!
-//! impl Deserialize for Demo {
-//!     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
+//! impl<'de> Deserialize<'de> for Demo {
+//!     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
 //!         // All Deserialize impls look like this.
 //!         Place::new(out)
 //!     }
@@ -190,7 +196,7 @@ use crate::export::{Asset, Entity};
 /// Trait for data structures that can be deserialized from a JSON string.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Deserialize<'i> : Sized {
+pub trait Deserialize<'de> : Sized {
     /// The only correct implementation of this method is:
     ///
     /// ```rust
@@ -199,15 +205,15 @@ pub trait Deserialize<'i> : Sized {
     /// #
     /// # make_place!(Place);
     /// # struct S;
-    /// # impl Visitor for Place<S> {}
+    /// # impl<'de> Visitor<'de> for Place<S> {}
     /// #
-    /// # impl Deserialize for S {
-    /// fn begin(out: &mut Option<Self>) -> &mut dyn Visitor {
+    /// # impl<'de> Deserialize<'de> for S {
+    /// fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
     ///     Place::new(out)
     /// }
     /// # }
     /// ```
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'i>;
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de>;
 
     // Not public API. This method is only intended for Option<T>, should not
     // need to be implemented outside of this crate.
@@ -222,7 +228,7 @@ pub trait Deserialize<'i> : Sized {
 /// Trait that can write data into an output place.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Visitor<'i> {
+pub trait Visitor<'de> {
     fn null(&mut self, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         Err(Error)
@@ -233,7 +239,7 @@ pub trait Visitor<'i> {
         Err(Error)
     }
 
-    fn string(&mut self, s: &'i str, c: &mut dyn Context) -> Result<()> {
+    fn string(&mut self, s: &'de str, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = s;
         Err(Error)
@@ -256,16 +262,16 @@ pub trait Visitor<'i> {
         Err(Error)
     }
 
-    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'i> + 'a>> 
+    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
     where
-        'i: 'a
+        'de: 'a
     {
         Err(Error)
     }
     
-    fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'i> + 'a>>
+    fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
     where
-        'i: 'a
+        'de: 'a
     {
         Err(Error)
     }
@@ -276,7 +282,7 @@ pub trait Visitor<'i> {
         Err(Error)
     }
 
-    fn bytes(&mut self, b: &'i [u8], c: &mut dyn Context) -> Result<()> {
+    fn bytes(&mut self, b: &'de [u8], c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = b;
         Err(Error)
@@ -286,16 +292,16 @@ pub trait Visitor<'i> {
 /// Trait that can hand out places to write sequence elements.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Seq<'i> {
-    fn element(&mut self) -> Result<&mut dyn Visitor<'i>>;
+pub trait Seq<'de> {
+    fn element(&mut self) -> Result<&mut dyn Visitor<'de>>;
     fn finish(&mut self, c: &mut dyn Context) -> Result<()>;
 }
 
 /// Trait that can hand out places to write values of a map.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Map<'i> {
-    fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'i>>;
+pub trait Map<'de> {
+    fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>>;
     fn finish(&mut self, c: &mut dyn Context) -> Result<()>;
 }
 

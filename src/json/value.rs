@@ -25,24 +25,24 @@ use crate::Place;
 /// // no stack overflow when `value` goes out of scope
 /// ```
 #[derive(Clone, Debug)]
-pub enum Value<'i> {
+pub enum Value<'de> {
     Null,
     Bool(bool),
     Number(Number),
-    String(Cow<'i, str>),
-    Binary(Cow<'i, [u8]>), // * MOD: Byte support
-    Array(Array<'i>),
-    Object(Object<'i>),
+    String(Cow<'de, str>),
+    Binary(Cow<'de, [u8]>), // * MOD: Byte support
+    Array(Array<'de>),
+    Object(Object<'de>),
 }
 
-impl<'i> Default for Value<'i> {
+impl<'de> Default for Value<'de> {
     /// The default value is null.
     fn default() -> Self {
         Value::Null
     }
 }
 
-impl<'i> Serialize for Value<'i> {
+impl<'de> Serialize for Value<'de> {
     fn begin(&self, _c: &dyn ser::Context) -> Fragment {
         match self {
             Value::Null => Fragment::Null,
@@ -59,9 +59,9 @@ impl<'i> Serialize for Value<'i> {
     }
 }
 
-impl<'i> Deserialize<'i> for Value<'i> {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'i> {
-        impl<'i> Visitor<'i> for Place<Value<'i>> {
+impl<'de> Deserialize<'de> for Value<'de> {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+        impl<'de> Visitor<'de> for Place<Value<'de>> {
             fn null(&mut self, _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::Null);
                 Ok(())
@@ -72,7 +72,7 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 Ok(())
             }
 
-            fn string(&mut self, s: &'i str, _c: &mut dyn de::Context) -> Result<()> {
+            fn string(&mut self, s: &'de str, _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::String(Cow::Borrowed(s)));
                 Ok(())
             }
@@ -92,9 +92,9 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 Ok(())
             }
 
-            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'i> + 'a>> 
+            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
             where
-                'i: 'a
+                'de: 'a
             {
                 Ok(Box::new(ArrayBuilder {
                     out: &mut self.out,
@@ -103,9 +103,9 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 }))
             }
 
-            fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'i> + 'a>>
+            fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
             where
-                'i: 'a
+                'de: 'a
             {
                 Ok(Box::new(ObjectBuilder {
                     out: &mut self.out,
@@ -120,19 +120,19 @@ impl<'i> Deserialize<'i> for Value<'i> {
                 Ok(())
             }
         
-            fn bytes(&mut self, b: &'i [u8], _c: &mut dyn de::Context) -> Result<()> {
+            fn bytes(&mut self, b: &'de [u8], _c: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::Binary(Cow::Borrowed(b)));
                 Ok(())
             }
         }
 
-        struct ArrayBuilder<'a, 'i> {
-            out: &'a mut Option<Value<'i>>,
-            array: Array<'i>,
-            element: Option<Value<'i>>,
+        struct ArrayBuilder<'a, 'de> {
+            out: &'a mut Option<Value<'de>>,
+            array: Array<'de>,
+            element: Option<Value<'de>>,
         }
 
-        impl<'a, 'i> ArrayBuilder<'a, 'i> {
+        impl<'a, 'de> ArrayBuilder<'a, 'de> {
             fn shift(&mut self) {
                 if let Some(e) = self.element.take() {
                     self.array.push(e);
@@ -140,8 +140,8 @@ impl<'i> Deserialize<'i> for Value<'i> {
             }
         }
 
-        impl<'a, 'i> Seq<'i> for ArrayBuilder<'a, 'i> {
-            fn element(&mut self) -> Result<&mut dyn Visitor<'i>> {
+        impl<'a, 'de> Seq<'de> for ArrayBuilder<'a, 'de> {
+            fn element(&mut self) -> Result<&mut dyn Visitor<'de>> {
                 self.shift();
                 Ok(Deserialize::begin(&mut self.element))
             }
@@ -153,14 +153,14 @@ impl<'i> Deserialize<'i> for Value<'i> {
             }
         }
 
-        struct ObjectBuilder<'a, 'i> {
-            out: &'a mut Option<Value<'i>>,
-            object: Object<'i>,
+        struct ObjectBuilder<'a, 'de> {
+            out: &'a mut Option<Value<'de>>,
+            object: Object<'de>,
             key: Option<String>,
-            value: Option<Value<'i>>,
+            value: Option<Value<'de>>,
         }
 
-        impl<'a, 'i> ObjectBuilder<'a, 'i> {
+        impl<'a, 'de> ObjectBuilder<'a, 'de> {
             fn shift(&mut self) {
                 if let (Some(k), Some(v)) = (self.key.take(), self.value.take()) {
                     self.object.insert(k, v);
@@ -168,8 +168,8 @@ impl<'i> Deserialize<'i> for Value<'i> {
             }
         }
 
-        impl<'a, 'i> Map<'i> for ObjectBuilder<'a, 'i> {
-            fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'i>> {
+        impl<'a, 'de> Map<'de> for ObjectBuilder<'a, 'de> {
+            fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>> {
                 self.shift();
                 self.key = Some(k.to_owned());
                 Ok(Deserialize::begin(&mut self.value))
@@ -187,7 +187,7 @@ impl<'i> Deserialize<'i> for Value<'i> {
     }
 }
 
-impl<'i> Value<'i> {
+impl<'de> Value<'de> {
     /// Converts a hex string into binary data
     pub fn from_hex(&mut self) -> Result<()> {
         match self {

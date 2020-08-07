@@ -7,11 +7,11 @@ use crate::json::{drop, Value};
 
 /// A `Vec<Value>` with a non-recursive drop impl.
 #[derive(Clone, Debug, Default)]
-pub struct Array<'i> {
-    inner: Vec<Value<'i>>,
+pub struct Array<'de> {
+    inner: Vec<Value<'de>>,
 }
 
-impl<'i> Drop for Array<'i> {
+impl<'de> Drop for Array<'de> {
     fn drop(&mut self) {
         self.inner.drain(..).for_each(drop::safely);
     }
@@ -22,57 +22,57 @@ fn take(array: Array) -> Vec<Value> {
     unsafe { ptr::read(&array.inner) }
 }
 
-impl<'i> Array<'i> {
+impl<'de> Array<'de> {
     pub fn new() -> Self {
         Array { inner: Vec::new() }
     }
 }
 
-impl<'i> Deref for Array<'i> {
-    type Target = Vec<Value<'i>>;
+impl<'de> Deref for Array<'de> {
+    type Target = Vec<Value<'de>>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<'i> DerefMut for Array<'i> {
+impl<'de> DerefMut for Array<'de> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<'i> IntoIterator for Array<'i> {
-    type Item = Value<'i>;
-    type IntoIter = <Vec<Value<'i>> as IntoIterator>::IntoIter;
+impl<'de> IntoIterator for Array<'de> {
+    type Item = Value<'de>;
+    type IntoIter = <Vec<Value<'de>> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         take(self).into_iter()
     }
 }
 
-impl<'a, 'i> IntoIterator for &'a Array<'i> {
-    type Item = &'a Value<'i>;
-    type IntoIter = <&'a Vec<Value<'i>> as IntoIterator>::IntoIter;
+impl<'a, 'de> IntoIterator for &'a Array<'de> {
+    type Item = &'a Value<'de>;
+    type IntoIter = <&'a Vec<Value<'de>> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, 'i> IntoIterator for &'a mut Array<'i> {
-    type Item = &'a mut Value<'i>;
-    type IntoIter = <&'a mut Vec<Value<'i>> as IntoIterator>::IntoIter;
+impl<'a, 'de> IntoIterator for &'a mut Array<'de> {
+    type Item = &'a mut Value<'de>;
+    type IntoIter = <&'a mut Vec<Value<'de>> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
     }
 }
 
-impl<'i> FromIterator<Value<'i>> for Array<'i> {
+impl<'de> FromIterator<Value<'de>> for Array<'de> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = Value<'i>>,
+        I: IntoIterator<Item = Value<'de>>,
     {
         Array {
             inner: Vec::from_iter(iter),

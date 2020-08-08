@@ -30,6 +30,9 @@ mod simd;
 #[cfg(feature = "simd")]
 pub use simd::from_str;
 
+mod owned;
+pub use self::owned::{from_str_owned, Owned};
+
 /// Any string ending with `\u0010` ascii control char,
 /// should be treated as hex encoded binary data
 pub const HEX_HINT: char = '\x10';

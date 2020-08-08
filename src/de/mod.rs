@@ -224,7 +224,7 @@ pub trait Deserialize<'de> : Sized {
     }
 }
 
-// * MOD Added some optional contex to certain types of objects
+// * MOD Added some optional context to certain types of objects
 /// Trait that can write data into an output place.
 ///
 /// [Refer to the module documentation for examples.][::de]
@@ -276,7 +276,7 @@ pub trait Visitor<'de> {
         Err(Error)
     }
 
-    // * MOD: Extra deserializaiton functions
+    // * MOD: Extra deserialization functions
     fn single(&mut self, n: f32) -> Result<()> {
         let _ = n;
         Err(Error)

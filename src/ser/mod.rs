@@ -109,9 +109,14 @@ pub enum Fragment<'a> {
     U32(u32),
     I32(i32),
     F32(f32),
-    /// Binary data, shuolb be serialized as hex string when binary
+    /// Binary data, should be serialized as hex string when binary
     /// output is not supported like in json
-    Bin(Cow<'a, [u8]>),
+    Bin {
+        /// Unaligned binary data
+        bytes: Cow<'a, [u8]>,
+        /// Bytes alignment, must be ensured
+        align: usize,
+    },
 }
 
 /// Trait for data structures that can be serialized to a JSON string.

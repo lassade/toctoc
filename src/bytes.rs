@@ -63,13 +63,17 @@ impl<T: ByValue> Binary for &[T] {
     }
 }
 
-/// Implemented by all types that are represented by value
-pub trait ByValue {}
+/// Blanket trait implemented by all types that are represented by value
+pub unsafe trait ByValue {}
 
 macro_rules! by_val {
-    ($($t:tt),*) => { $(impl ByValue for $t {})* };
-    ($(>$($t:ident),*<),*) => { $(impl<$($t: ByValue,)*> ByValue for ($($t),*) {})* };
-    (<$($v:literal),*>) => { $(impl<T:ByValue> ByValue for [T; $v] {})* };
+    ($($t:tt),*) => { $(unsafe impl ByValue for $t {})* };
+    (<$($v:literal),*>) => {
+        $(unsafe impl<T:ByValue> ByValue for [T; $v] {})*
+    };
+    ($(>$($t:ident),*<),*) => {
+        $(unsafe impl<$($t: ByValue,)*> ByValue for ($($t),*) {})*
+    };
 }
 
 by_val!(char, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
@@ -126,14 +130,14 @@ mod tests {
 
     #[test]
     fn binary_cast() {
-        let v = vec![2u32, 3u32, 4u32];
+        let v = vec![(4u32, 4u32), (4u32, 4u32), (4u32, 4u32)];
         let (bytes, a) = v.as_bytes();
-        assert_eq!(a, align_of::<u32>());
+        assert_eq!(a, align_of::<(u32, u32)>());
 
-        let s = <&[u32]>::from_bytes(bytes).unwrap();
+        let s = <&[(u32, u32)]>::from_bytes(bytes).unwrap();
         assert_eq!(s, &v[..]);
 
-        let a = <Vec<u32>>::from_bytes(bytes).unwrap();
+        let a = <Vec<(u32, u32)>>::from_bytes(bytes).unwrap();
         assert_eq!(a, v);
     }
 }

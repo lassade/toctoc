@@ -1,4 +1,5 @@
 use knocknoc::{Deserialize as KDeserialize, Serialize as KSerialize};
+use knocknoc::bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, KDeserialize, KSerialize)]
@@ -6,6 +7,11 @@ struct V {
     string: String,
     b: bool,
     int: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, KDeserialize, KSerialize)]
+struct MeshReadOnly<'a> {
+    verts: Bytes<&'a [(u32, u32)]>,
 }
 
 /// May be used to deserialize primitive types
@@ -60,4 +66,15 @@ fn test_bson_primitive() {
     test_primitive!(true, bool);
     test_primitive!(0i32, i32);
     test_primitive!("Hello World!".to_string(), String);
+}
+
+#[test]
+fn bson_zero_copy() {
+    let m0 = MeshReadOnly {
+        verts: Bytes(&[(0xAA55AA55, 0), (0, 0), (0, 0), (0, 0)][..]),
+    };
+    let bson = knocknoc::bson::to_bin(&m0, & ());
+    assert_eq!(bson.as_ptr().align_offset(4), 0);
+    let m1: MeshReadOnly = knocknoc::bson::from_bin(&bson, &mut ()).unwrap();
+    assert_eq!(m0, m1);
 }

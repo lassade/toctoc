@@ -1,9 +1,9 @@
 use std::pin::Pin;
 
 /// Keeps a value `T` that contains borrows to some data `D`.
-/// Meant for moving zero copy structs and theis data around.
+/// Meant for moving zero copy structs and theirs data around.
 ///
-/// Most recomended way is to use as a read only primitive,
+/// Most recommended way is to use as a read only primitive,
 /// but also implements `as_mut` for mutability.
 #[allow(dead_code)]
 pub struct OwnedRaw<D, T> {
@@ -15,9 +15,9 @@ impl<D, T> OwnedRaw<D, T> {
     /// Gets a reference of `T`.
     ///
     /// ***Warning*** Rust doesn't support self borrowing thus is
-    /// un anble to savely handle this reference. Calling `clone`
-    /// or `to_owned` on this reference will detach it from the underlaing
-    /// data that can be droped before the cloned ref, resulting in a 
+    /// unable to safely handle this reference. Calling `clone`
+    /// or `to_owned` on this reference will detach it from the underlying
+    /// data that can be dropped before the cloned ref, resulting in a 
     /// use after free error.
     pub unsafe fn as_ref(&self) -> &T {
         self.value.as_ref().unwrap()
@@ -26,9 +26,9 @@ impl<D, T> OwnedRaw<D, T> {
     /// Gets a mutable reference of `T`.
     ///
     /// ***Warning*** Rust doesn't support self borrowing thus is
-    /// un anble to savely handle this reference. Calling `clone`
-    /// or `to_owned` on this reference will detach it from the underlaing
-    /// data that can be droped before the cloned ref, resulting in a 
+    /// unable to safely handle this reference. Calling `clone`
+    /// or `to_owned` on this reference will detach it from the underlying
+    /// data that can be dropped before the cloned ref, resulting in a 
     /// use after free error.
     pub unsafe fn as_mut(&mut self) -> &mut T {
         self.value.as_mut().unwrap()

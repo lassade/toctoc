@@ -64,17 +64,16 @@ macro_rules! read_byte_impl {
     };
 }
 
-/// Provides varius functions to read bytes from the inner buffer
+/// Provides various functions to read bytes from the inner buffer
 /// and interpreting as little endian bytes many primitive types
 impl<'a, 'b>  Deserializer<'a, 'b> {
     read_byte_impl!(u8, i8, u32, i32, u64, i64, f32, f64);
 
     fn read_bytes(&mut self, length: usize) -> Result<&'a [u8]> {
-        let i = length - 1;
-        if i < self.buffer.len() {
-            let (buf, rem) = self.buffer.split_at(i);
+        if length < self.buffer.len() {
+            let (buf, rem) = self.buffer.split_at(length);
             self.buffer = rem;
-            self.index += i;
+            self.index += length;
             Ok(buf)
         } else {
             Err(Error)
@@ -160,15 +159,32 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
                 visitor.bytes(b, context)?;
                 None
             },
-            0x02 => {
+            0x8F => { // Aligned data!
                 let size = de.read_u32()?;
-                // TODO: Maybe implement the `lookup4` algorimth
-                let bytes = de.read_bytes(size as usize)?;
+                let align: u8 = de.read_u8()?;
+                let offset = de.read_u8()?;
+                de.read_bytes(offset as usize)?;
+                let b = de.read_bytes(size as usize)?;
+
+                if !align.is_power_of_two()
+                    || align == 0 // align is valid
+                    || b.as_ptr().align_offset(align as usize) != 0 // is aligned
+                {
+                    Err(Error)?
+                }
+
+                visitor.bytes(b, context)?;
+                None
+            },
+            0x02 => { // Utf8 String
+                let size = de.read_u32()?;
+                let bytes = de.read_bytes((size - 1) as usize)?;
+                // TODO: Maybe implement the `lookup4` algorithm
                 if !faster_utf8_validator::validate(bytes) {
                     Err(Error)?
                 }
                 let s = unsafe { str::from_utf8_unchecked(bytes) };
-                de.read_u8()?;
+                de.read_u8()?; // read the '\0'
                 visitor.string(s, context)?;
                 None
             },

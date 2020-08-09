@@ -53,16 +53,11 @@ impl<'a> Drop for Serializer<'a> {
     }
 }
 
-// Change object type
-macro_rules! wb {
-    ($o:ident, $t:expr) => { $o.extend_from_slice(&$t.to_le_bytes()[..]); };
-}
-
 // Empty document
 macro_rules! empty {
     ($o:ident) => { {
-        wb!($o, 0x1_u32);
-        wb!($o, 0x00_u8);
+        $o.write_u32(1);
+        $o.write_u8(0);
     } };
 }
 
@@ -75,7 +70,7 @@ macro_rules! done {
         $o.iter_mut().skip(i)
             .zip(&((l - i + 1) as u32).to_le_bytes()[..])
             .for_each(|(x, a)| *x = *a);
-        wb!($o, 0x00_u8);
+        $o.write_u8(0x00_u8);
     } };
 }
 
@@ -86,43 +81,43 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
     let mut field: Option<Cow<str>> = None;
 
     // Root document
-    wb!(out, 0_u32);
+    out.write_u32(0);
 
     loop {
         // Keep type index to change it later
         let i = out.len();
 
         // Use null as temp type
-        wb!(out, 0x0A_u8);
+        out.write_u8(0x0A);
 
         // e_name contents
         if let Some(n) = field.take() {
             out.extend_from_slice(&n.as_bytes());
         }
-        wb!(out, 0x00_u8); // c_string null terminator
+        out.write_u8(0x00); // c_string null terminator
 
         match fragment {
             Fragment::Null => {},
             Fragment::Bool(b) => {
                 out[i] = 0x8;
-                wb!(out, if b { 1_u8 } else { 0_u8 });
+                out.write_u8(if b { 1_u8 } else { 0_u8 });
             },
             Fragment::Str(s) => {
                 out[i] = 0x02;
-                wb!(out, (s.len() + 1) as u32);
+                out.write_u32((s.len() + 1) as u32);
                 out.extend_from_slice(&s.as_bytes());
-                wb!(out, 0x00_u8);
+                out.write_u8(0x00); // '\0'
             },
-            Fragment::U64(n) => { out[i] = 0x11; wb!(out, n); },
-            Fragment::I64(n) => { out[i] = 0x10; wb!(out, n); },
-            Fragment::F64(n) => { out[i] = 0x01; wb!(out, n); },
+            Fragment::U64(n) => { out[i] = 0x11; out.write_u64(n); },
+            Fragment::I64(n) => { out[i] = 0x10; out.write_i64(n); },
+            Fragment::F64(n) => { out[i] = 0x01; out.write_f64(n); },
             Fragment::Seq(mut seq) => {
                 out[i] = 0x04;
                 // invariant: `seq` must outlive `first`
                 match careful!(seq.next() as Option<&dyn Serialize>) {
                     Some(first) => {
                         let doc = out.len();
-                        wb!(out, 0_u32);
+                        out.write_u32(0);
                         serializer.stack.push(Layer::Seq(seq, doc));
                         fragment = first.begin(context);
                         continue;
@@ -136,7 +131,7 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
                 match careful!(map.next() as Option<(Cow<str>, &dyn Serialize)>) {
                     Some((key, first)) => {
                         let doc = out.len();
-                        wb!(out, 0_u32);
+                        out.write_u32(0);
                         serializer.stack.push(Layer::Map(map, doc));
                         field = Some(key);
                         fragment = first.begin(context);
@@ -147,24 +142,24 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
             },
             // * MOD: Format new fagment types
             // ? NOTE: These all have custom user defined types
-            Fragment::U8(n) => { out[i] = 0x81; wb!(out, n); },
-            Fragment::I8(n) => { out[i] = 0x82; wb!(out, n); },
-            Fragment::U32(n) => { out[i] = 0x83; wb!(out, n); },
-            Fragment::I32(n) => { out[i] = 0x10; wb!(out, n); },
-            Fragment::F32(n) => { out[i] = 0x85; wb!(out, n); },
+            Fragment::U8(n) => { out[i] = 0x81; out.write_u8(n); },
+            Fragment::I8(n) => { out[i] = 0x82; out.write_i8(n); },
+            Fragment::U32(n) => { out[i] = 0x83; out.write_u32(n); },
+            Fragment::I32(n) => { out[i] = 0x10; out.write_i32(n); },
+            Fragment::F32(n) => { out[i] = 0x85; out.write_f32(n); },
             Fragment::Bin { bytes, align } => {
-                //if !align.is_power_of_two() { Err(Error)? }
                 if align == 1 {
                     out[i] = 0x05;
-                    wb!(out, bytes.len() as u32);
+                    out.write_u32(bytes.len() as u32);
                     out.extend_from_slice(&bytes);
                 } else {
                     out[i] = 0x8F; // Aligned data!
-
-                    todo!()
-
-                    // wb!(out, bytes.len() as u32);
-                    // out.extend_from_slice(&bytes);
+                    out.write_u32(bytes.len() as u32);
+                    out.write_u8(align as u8);
+                    let index = out.len();
+                    out.write_u8(0); // Data offset
+                    let offset = (out.extend_from_slice_aligned(&bytes, align) - index - 1) as u8;
+                    out[index] = offset;
                 }
             },
         }

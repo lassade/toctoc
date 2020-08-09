@@ -1,10 +1,32 @@
 use std::mem::{align_of, size_of};
-use crate::{Result, Error};
+use crate::{ser, de, Result, Error, Place};
+use crate::export::Cow;
 
 /// Wrapper around slices or vec to be (de)serialize as bytes
-pub struct Bytes<T: Binary>(T);
+#[derive(Default, Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct Bytes<T: Binary>(pub T);
 
-// TODO: Serialize and deserialize
+impl<T: Binary> ser::Serialize for Bytes<T> {
+    fn begin(&self, _: &dyn ser::Context) -> ser::Fragment {
+        let (b, align) =  Binary::as_bytes(&self.0);
+        ser::Fragment::Bin {
+            bytes: Cow::Borrowed(b),
+            align, 
+        }
+    }
+}
+
+impl<'de, T: Binary> de::Deserialize<'de> for Bytes<T> {
+    fn begin(out: &mut Option<Self>) -> &mut dyn de::Visitor<'de> {
+        impl<'de, T1: Binary> de::Visitor<'de> for Place<Bytes<T1>> {
+            fn bytes(&mut self, b: &'de [u8], _: &mut dyn de::Context) -> Result<()> {
+                self.out = Some(Bytes(T1::from_bytes(b)?));
+                Ok(())
+            }
+        }
+        Place::new(out)
+    }
+}
 
 /// Implemented by any type that can be converted into or from bytes
 pub trait Binary: Sized {

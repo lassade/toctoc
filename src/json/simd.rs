@@ -96,11 +96,10 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
             },
             Some(String(s)) => {
                 if s.chars().last() == Some(HEX_HINT) {
-                    let c = s.len() - 1;
-                    // TODO: replace bytes on the string
-                    let b = bintext::hex::decode(&s[..c]).map_err(|_| Error)?;
+                    //let c = s.len() - 1;
+                    //let b = bintext::hex::decode(&s[..c]).map_err(|_| Error)?;
                     //visitor.bytes(b, context)?;
-                    todo!("bytes is not current supported!")
+                    unimplemented!()
                 } else {
                     visitor.string(s, context)?;
                 }

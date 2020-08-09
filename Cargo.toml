@@ -43,6 +43,6 @@ default = ["simd"]
 simd = ["simd-json"]
 
 
-#[[bench]]
-#name = "bench"
-#harness = false
+[[bench]]
+name = "bench"
+harness = false

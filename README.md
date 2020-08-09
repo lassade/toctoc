@@ -6,26 +6,26 @@ Knocknoc
 
 ### Extra: Support for u8, i8, u32, i32 and f32
 
-The added support will allow for a smaler binray representation, `f32`
-is very commonly used on games, thus was added to avoid desnecessary
+The added support will allow for a smaller binary representation, `f32`
+is very commonly used on games, thus was added to avoid unnecessary
 conversions between and from `f64`, that will take a bit of cpu cycles.
 
 ### Extra: Enumeration support
 
-This lib only use externally taged enumerations. Adjacent and internal
+This lib only use externally tagged enumerations. Adjacent and internal
 formats may be added in the future (but probably won't).
 
 ### Extra: Bson support (binary json)
 
 Bson is like a binary json format. so it's more suitable for binary
-data and also self described, but it doest not gaurantee memory aligment
-for data structures that may requeir it.
+data and also self described, but it doest not guarantee memory alignment
+for data structures that may require it.
 
 ### Extra: Stateful or contextual (de)serialization
 
-Used for load assets or referece game entities
+Used for load assets or reference game entities
 
-### Extra: Deserilize into
+### Extra: Deserialize into
 
 TODO
 
@@ -33,13 +33,13 @@ TODO
 
 By enabling the `simd` feature, json (de)serialization will be done by
 the [simd_json](https://crates.io/crates/simd-json) crate,
-currely fastest (pure rust) json parsing crate avaliable.
+currently fastest (pure rust) json parsing crate available.
 
 ### Zero Copy (WIP)
 
 Like serde this lib supports zero copy load, for strings it works like
 intended, for bytes it may require move memory around to match struct
-aligment requeriments, since both json and bson arent zero copy formats.
+alignment requirements, since both json and bson aren't zero copy formats.
 
 Miniserde (original)
 =========

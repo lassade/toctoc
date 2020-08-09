@@ -165,6 +165,7 @@ mod place;
 mod error;
 mod ignore;
 mod owned;
+pub mod buffer;
 pub mod bytes;
 
 pub mod de;

@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use crate::ser::{Fragment, Map, Seq, Serialize, Context};
+use crate::buffer::Buffer;
 
 #[cfg(target_endian = "big")]
 #[allow(unused)]
@@ -57,7 +58,7 @@ macro_rules! wb {
     ($o:ident, $t:expr) => { $o.extend_from_slice(&$t.to_le_bytes()[..]); };
 }
 
-// Empty doccument
+// Empty document
 macro_rules! empty {
     ($o:ident) => { {
         wb!($o, 0x1_u32);
@@ -79,13 +80,13 @@ macro_rules! done {
 }
 
 fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
-    let mut out = Vec::new();
-    let mut serializer = Serializer { stack: Vec::new() };
+    let mut out = Buffer::new();
+    let mut serializer = Serializer { stack: vec![] };
     let mut fragment = value.begin(context);
     let mut field: Option<Cow<str>> = None;
 
     // Root document
-    wb!(out, 0_u32); // TODO: write byte lenght
+    wb!(out, 0_u32);
 
     loop {
         // Keep type index to change it later
@@ -151,10 +152,20 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
             Fragment::U32(n) => { out[i] = 0x83; wb!(out, n); },
             Fragment::I32(n) => { out[i] = 0x10; wb!(out, n); },
             Fragment::F32(n) => { out[i] = 0x85; wb!(out, n); },
-            Fragment::Bin(b) => {
-                out[i] = 0x05;
-                wb!(out, b.len() as u32);
-                out.extend_from_slice(&b);
+            Fragment::Bin { bytes, align } => {
+                //if !align.is_power_of_two() { Err(Error)? }
+                if align == 1 {
+                    out[i] = 0x05;
+                    wb!(out, bytes.len() as u32);
+                    out.extend_from_slice(&bytes);
+                } else {
+                    out[i] = 0x8F; // Aligned data!
+
+                    todo!()
+
+                    // wb!(out, bytes.len() as u32);
+                    // out.extend_from_slice(&bytes);
+                }
             },
         }
 
@@ -183,7 +194,7 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
                 }
                 None => {
                     done!(out, 0); // End root level document
-                    return out;
+                    return out.to_vec();
                 }
             }
             serializer.stack.pop();

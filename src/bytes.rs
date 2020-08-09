@@ -11,11 +11,11 @@ pub trait Binary: Sized {
     /// Returns a byte slice and alignment for this binary type
     fn as_bytes(&self) -> (&[u8], usize);
     /// Makes a new `Self` from bytes.
-    /// ***NOTE*** Be sure to check memory alignment
+    /// ***NOTE*** This function should to check memory alignment first
     fn from_bytes(bytes: &[u8]) -> Result<Self>;
 }
 
-impl<T: ByValue + Copy> Binary for Vec<T> {
+impl<T: ByValue> Binary for Vec<T> {
     fn as_bytes(&self) -> (&[u8], usize) {
         (
             unsafe { 
@@ -64,7 +64,7 @@ impl<T: ByValue> Binary for &[T] {
 }
 
 /// Blanket trait implemented by all types that are represented by value
-pub unsafe trait ByValue {}
+pub unsafe trait ByValue: Copy {}
 
 macro_rules! by_val {
     ($($t:tt),*) => { $(unsafe impl ByValue for $t {})* };

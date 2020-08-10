@@ -46,17 +46,11 @@ pub trait Binary<'a>: Sized + 'a {
 impl<'a, T: ByValue + 'a> Binary<'a> for Vec<T> {
     fn as_bytes(&self) -> (&[u8], usize) {
         (
-            unsafe { 
-                let bytes = std::slice::from_raw_parts(
+            unsafe {
+                std::slice::from_raw_parts(
                     self.as_ptr() as *const u8,
                     self.len() * size_of::<T>()
-                );
-
-                print!("as_bytes: ");
-                for b in bytes { print!("{:02x}", *b); }
-                println!();
-
-                bytes
+                )
             },
             align_of::<T>()
         )
@@ -73,17 +67,11 @@ impl<'a, T: ByValue + 'a> Binary<'a> for Vec<T> {
 impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
     fn as_bytes(&self) -> (&[u8], usize) {
         (
-            unsafe { 
-                let bytes = std::slice::from_raw_parts(
+            unsafe {
+                std::slice::from_raw_parts(
                     self.as_ptr() as *const u8,
                     self.len() * size_of::<T>()
-                );
-
-                print!("as_bytes: ");
-                for b in bytes { print!("{:02x}", *b); }
-                println!();
-
-                bytes
+                )
             },
             align_of::<T>()
         )
@@ -93,10 +81,6 @@ impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
         if bytes.as_ptr().align_offset(align_of::<T>()) != 0 {
             Err(Error)?
         }
-
-        print!("from_bytes: ");
-        for b in bytes { print!("{:02x}", *b); }
-        println!();
 
         unsafe {
             Ok(std::slice::from_raw_parts(

@@ -32,10 +32,3 @@ pub use simd::from_str;
 
 mod owned;
 pub use self::owned::{from_str_owned, Owned};
-
-/// Any string ending with `\u0010` ascii control char,
-/// should be treated as hex encoded binary data
-pub const HEX_HINT: char = '\x10';
-
-/// Utf8 escaped string for `HEX_HINT` char.
-pub const HEX_HINT_ESCAPED: &'static str = r#"\u0010"#;

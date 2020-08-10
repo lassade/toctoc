@@ -1,6 +1,5 @@
 use std::mem;
 
-use crate::json::HEX_HINT;
 use crate::de::{Deserialize, Map, Seq, Visitor, Context};
 use crate::error::{Error, Result};
 use simd_json::{Node, StaticNode};
@@ -67,7 +66,7 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
     use StaticNode::*;
 
     let mut de = Deserializer {
-        i: 1, // Frist node is alwyas of type `Static(Null)` 
+        i: 1, // First node is always of type `Static(Null)` 
         tape: simd_json::to_tape(j).map_err(|_| Error)?,
         stack: Vec::new(),
     };
@@ -95,11 +94,22 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
                 None
             },
             Some(String(s)) => {
-                if s.chars().last() == Some(HEX_HINT) {
-                    //let c = s.len() - 1;
-                    //let b = bintext::hex::decode(&s[..c]).map_err(|_| Error)?;
-                    //visitor.bytes(b, context)?;
-                    unimplemented!()
+                if s.starts_with('#') {
+                    let mut a = 0;
+                    for ch in s.as_bytes().iter().skip(1) {
+                        if *ch != b'-' { break; }
+                        a += 1;
+                    }
+
+                    // TODO: Is there a better way?
+                    #[allow(mutable_transmutes)]
+                    let b = unsafe {
+                        let s = std::mem::transmute(s);
+                        bintext::hex::decode_slice(s, a + 1, a.max(1))
+                            .map_err(|_| Error)?
+                    };
+
+                    visitor.bytes(b, context)?;
                 } else {
                     visitor.string(s, context)?;
                 }

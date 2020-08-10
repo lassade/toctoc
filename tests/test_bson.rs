@@ -71,7 +71,7 @@ fn test_bson_primitive() {
 #[test]
 fn bson_zero_copy() {
     let m0 = MeshReadOnly {
-        verts: Bytes(&[(0xAA55AA55, 0), (0, 0), (0, 0), (0, 0)][..]),
+        verts: Bytes::new(&[(0xAA55AA55, 0), (0, 0), (0, 0), (0, 0)][..]),
     };
     let bson = knocknoc::bson::to_bin(&m0, & ());
     assert_eq!(bson.as_ptr().align_offset(4), 0);

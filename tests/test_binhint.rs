@@ -1,45 +1,24 @@
 use knocknoc::json;
-use knocknoc::Result;
-use knocknoc::export::Cow;
-use knocknoc::de::{self, Deserialize, Visitor};
-use knocknoc::ser::{self, Serialize, Fragment};
+use knocknoc::bytes::Bytes;
 
-#[derive(Debug, PartialEq)]
-struct Bytes(Vec<u8>);
+macro_rules! bin {
+    ($ty:ty, $align:expr, $bytes:expr, $string:expr) => { {
+        let bytes = $bytes;
+        let string = $string;
+        let align = $align;
 
-impl Serialize for Bytes {
-    fn begin(&self, _c: &dyn ser::Context) -> Fragment {
-        Fragment::Bin { bytes: Cow::Borrowed(self.0.as_slice()), align: 1 }
-    }
+        let actual = json::to_string(&bytes, &mut ());
+        assert_eq!(actual, $string);
+
+        let json = &mut string.to_string();
+        let actual: Bytes<$ty> = json::from_str(json, &mut ()).unwrap();
+        assert_eq!(actual.0.as_ptr().align_offset(align), 0);
+        assert_eq!(actual.0, &bytes.0[..]);
+    } };
 }
 
-knocknoc::make_place!(Place);
-
-impl<'de> Deserialize<'de> for Bytes {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
-        impl<'de> Visitor<'de> for Place<Bytes> {
-            fn bytes(&mut self, b: &[u8], _c: &mut dyn de::Context) -> Result<()> {
-                self.out = Some(Bytes(b.to_vec()));
-                Ok(())
-            }
-        }
-        Place::new(out)
-    }
+#[test]
+fn test_binhint() {
+    bin!(&[u8], 1, Bytes::new(vec![2u8, 0, 3, 4]), "\"#02000304\"");
+    bin!(&[u32], 4, Bytes::new(vec![0x02000304_u32]), "\"#----04030002\"");
 }
-
-// #[test]
-// fn test_binhint() {
-//     let cases = &[
-//         (Bytes(vec![2, 0, 3, 4]), r#""02000304\u0010""#),
-//     ];
-    
-//     for (val, expected) in cases {
-//         let actual = json::to_string(val, &mut ());
-//         assert_eq!(actual, *expected);
-//     }
-
-//     for (expected, val) in cases {
-//         let actual: Bytes = json::from_str(&mut val.to_string(), &mut ()).unwrap();
-//         assert_eq!(actual, *expected);
-//     }
-// }

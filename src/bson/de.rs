@@ -116,6 +116,11 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
 }
 
 fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, context: &mut dyn Context) -> Result<()> {
+    // The buffer must be aligned with 4
+    if buffer.as_ptr().align_offset(4) != 0 {
+        Err(Error)?
+    }
+
     let mut de = Deserializer {
         buffer,
         index: 0,

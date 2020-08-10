@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-// use crate::json::HEX_HINT_ESCAPED;
 use crate::ser::{Fragment, Map, Seq, Serialize, Context};
 
 /// Serialize any serializable type into a JSON string.
@@ -91,7 +90,7 @@ fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
                     None => out.push('}'),
                 }
             }
-            // * MOD: Format new fagment types
+            // * MOD: Format new fragment types
             Fragment::U8(n) => out.push_str(itoa::Buffer::new().format(n)),
             Fragment::I8(n) => out.push_str(itoa::Buffer::new().format(n)),
             Fragment::U32(n) => out.push_str(itoa::Buffer::new().format(n)),
@@ -103,14 +102,17 @@ fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
                     out.push_str("null")
                 }
             },
-            // Fragment::Bin { bytes, align } => {
-            //     let _ = align;
-            //     out.push('"');
-            //     out.push_str(&bintext::hex::encode(bytes.as_ref()));
-            //     out.push_str(HEX_HINT_ESCAPED);
-            //     out.push('"');
-            // },
-            _ => unimplemented!(),
+            Fragment::Bin { bytes, align } => {
+                let _ = align;
+                out.push_str("\"#");
+                // Extra padding bytes for maneuvering, to ensure alignment
+                for _ in 0..(align/2) {
+                    out.push_str("--");
+                }
+                out.push_str(&bintext::hex::encode(bytes.as_ref()));
+                out.push('"');
+            },
+            //_ => unimplemented!(),
         }
 
         loop {

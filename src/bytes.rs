@@ -4,9 +4,15 @@ use crate::export::Cow;
 
 /// Wrapper around slices or vec to be (de)serialize as bytes
 #[derive(Default, Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
-pub struct Bytes<T: Binary>(pub T);
+pub struct Bytes<T>(pub T);
 
-impl<T: Binary> ser::Serialize for Bytes<T> {
+impl<'a, T: Binary<'a>> Bytes<T> {
+    pub fn new(val: T) -> Self {
+        Bytes(val)
+    }
+}
+
+impl<'a, T: Binary<'a>> ser::Serialize for Bytes<T> {
     fn begin(&self, _: &dyn ser::Context) -> ser::Fragment {
         let (b, align) =  Binary::as_bytes(&self.0);
         ser::Fragment::Bin {
@@ -16,11 +22,11 @@ impl<T: Binary> ser::Serialize for Bytes<T> {
     }
 }
 
-impl<'de, T: Binary> de::Deserialize<'de> for Bytes<T> {
+impl<'a, 'de: 'a, T: Binary<'a>> de::Deserialize<'de> for Bytes<T> {
     fn begin(out: &mut Option<Self>) -> &mut dyn de::Visitor<'de> {
-        impl<'de, T1: Binary> de::Visitor<'de> for Place<Bytes<T1>> {
+        impl<'a, 'de: 'a, T1: Binary<'a>> de::Visitor<'de> for Place<Bytes<T1>> {
             fn bytes(&mut self, b: &'de [u8], _: &mut dyn de::Context) -> Result<()> {
-                self.out = Some(Bytes(T1::from_bytes(b)?));
+                self.out = Some(Bytes::new(T1::from_bytes(b)?));
                 Ok(())
             }
         }
@@ -29,28 +35,34 @@ impl<'de, T: Binary> de::Deserialize<'de> for Bytes<T> {
 }
 
 /// Implemented by any type that can be converted into or from bytes
-pub trait Binary: Sized {
+pub trait Binary<'a>: Sized + 'a {
     /// Returns a byte slice and alignment for this binary type
     fn as_bytes(&self) -> (&[u8], usize);
     /// Makes a new `Self` from bytes.
     /// ***NOTE*** This function should to check memory alignment first
-    fn from_bytes(bytes: &[u8]) -> Result<Self>;
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self>;
 }
 
-impl<T: ByValue> Binary for Vec<T> {
+impl<'a, T: ByValue + 'a> Binary<'a> for Vec<T> {
     fn as_bytes(&self) -> (&[u8], usize) {
         (
             unsafe { 
-                std::slice::from_raw_parts(
+                let bytes = std::slice::from_raw_parts(
                     self.as_ptr() as *const u8,
                     self.len() * size_of::<T>()
-                )
+                );
+
+                print!("as_bytes: ");
+                for b in bytes { print!("{:02x}", *b); }
+                println!();
+
+                bytes
             },
             align_of::<T>()
         )
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self> {
         let slice = <&[T]>::from_bytes(bytes)?;
         let mut vec = Vec::with_capacity(slice.len());
         vec.extend_from_slice(slice);
@@ -58,23 +70,33 @@ impl<T: ByValue> Binary for Vec<T> {
     }
 }
 
-impl<T: ByValue> Binary for &[T] {
+impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
     fn as_bytes(&self) -> (&[u8], usize) {
         (
             unsafe { 
-                std::slice::from_raw_parts(
+                let bytes = std::slice::from_raw_parts(
                     self.as_ptr() as *const u8,
                     self.len() * size_of::<T>()
-                )
+                );
+
+                print!("as_bytes: ");
+                for b in bytes { print!("{:02x}", *b); }
+                println!();
+
+                bytes
             },
             align_of::<T>()
         )
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self> {
         if bytes.as_ptr().align_offset(align_of::<T>()) != 0 {
             Err(Error)?
         }
+
+        print!("from_bytes: ");
+        for b in bytes { print!("{:02x}", *b); }
+        println!();
 
         unsafe {
             Ok(std::slice::from_raw_parts(

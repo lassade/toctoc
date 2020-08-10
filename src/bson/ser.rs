@@ -3,12 +3,6 @@ use std::borrow::Cow;
 use crate::ser::{Fragment, Map, Seq, Serialize, Context};
 use crate::buffer::Buffer;
 
-#[cfg(target_endian = "big")]
-#[allow(unused)]
-pub fn check_endianess() {
-    compile_error!("bson not supported on big-endian targets, because of strings and bineary data are assumed to be in little endian");
-}
-
 /// Serialize any serializable type into a BSON byte vec.
 ///
 /// ```rust

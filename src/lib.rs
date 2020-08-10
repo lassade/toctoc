@@ -183,3 +183,11 @@ make_place!(Place);
 
 #[allow(non_camel_case_types)]
 struct private;
+
+
+#[cfg(target_endian = "big")]
+#[allow(unused)]
+pub fn check_endianness() {
+    compile_error!("`Bytes` are always assumed to be in little endian, this will break json hexadecimal strings;\
+        bson strings and binary data doesn't support big endian");
+}

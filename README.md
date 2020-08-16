@@ -25,21 +25,24 @@ for data structures that may require it.
 
 Used for load assets or reference game entities
 
-### Extra: Deserialize into
-
-TODO
-
 ### Extra: SIMD support
 
 By enabling the `simd` feature, json (de)serialization will be done by
 the [simd_json](https://crates.io/crates/simd-json) crate,
 currently fastest (pure rust) json parsing crate available.
 
-### Zero Copy (WIP)
+### Zero Copy
 
-Like serde this lib supports zero copy load, for strings it works like
-intended, for bytes it may require move memory around to match struct
-alignment requirements, since both json and bson aren't zero copy formats.
+Like serde this lib supports zero copy load, and it also provides a simple
+encoding formats for aligned binary data on both json and bson.
+
+For json we have some thing like this `{ "binary": "#----01000000" }`, `#`
+tells the parser this is binary data, the amount of `-` tells the alignment
+requirement for this bytes; With this format `bintext` is able to decode
+the string into a memory aligned byte slice!
+
+For bson the start buffer must be aligned with `4` and thats it all the
+necessary padding;
 
 Miniserde (original)
 =========
@@ -153,27 +156,6 @@ Serialization always succeeds. This means we cannot serialize some data types
 that Serde can serialize, such as `Mutex` which may fail to serialize due to
 poisoning. Also we only serialize to `String`, not to something like an i/o
 stream which may be fallible.
-
-### Different: JSON only
-
-The same approach in this library could be made to work for other data formats,
-but it is not a goal to enable that through what this library exposes.
-
-### Different: Structs only
-
-The knocknoc derive macros will refuse anything other than a braced struct with
-named fields. Enums and tuple structs are not supported.
-
-### Different: No customization
-
-Serde has tons of knobs for configuring the derived serialization and
-deserialization logic through attributes. Or for the ultimate level of
-configurability you can handwrite arbitrarily complicated implementations of its
-traits.
-
-knocknoc provides just one attribute which is `rename`, and severely restricts
-the kinds of on-the-fly manipulation that are possible in custom impls. If you
-need any of this, use Serde -- it's a great library.
 
 <br>
 

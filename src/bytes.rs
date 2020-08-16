@@ -92,6 +92,11 @@ impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
 }
 
 /// Blanket trait implemented by all types that are represented by value
+///
+/// **WARNING** Be very careful when implementing this trait on structs
+/// make sure no pointers or borrows are present and the
+/// (Data Layout)[https://doc.rust-lang.org/nomicon/repr-rust.html]
+/// of the struct is consistent across builds;
 pub unsafe trait ByValue: Copy {}
 
 macro_rules! by_val {
@@ -99,21 +104,23 @@ macro_rules! by_val {
     (<$($v:literal),*>) => {
         $(unsafe impl<T:ByValue> ByValue for [T; $v] {})*
     };
-    ($(>$($t:ident),*<),*) => {
-        $(unsafe impl<$($t: ByValue,)*> ByValue for ($($t),*) {})*
-    };
+    // ($(>$($t:ident),*<),*) => {
+    //     $(unsafe impl<$($t: ByValue,)*> ByValue for ($($t),*) {})*
+    // };
 }
 
 by_val!(char, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
 by_val!(< 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
          17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32>);
-by_val!(>T0, T1<,
-        >T1, T2, T3<,
-        >T1, T2, T3, T4<,
-        >T1, T2, T3, T4, T5<,
-        >T1, T2, T3, T4, T5, T6<,
-        >T1, T2, T3, T4, T5, T6, T7<,
-        >T1, T2, T3, T4, T5, T6, T7, T8<);
+// ? NOTE We can't have tuple implementations because their representation in
+// ? memory isn't consistent;
+// by_val!(>T0, T1<,
+//         >T1, T2, T3<,
+//         >T1, T2, T3, T4<,
+//         >T1, T2, T3, T4, T5<,
+//         >T1, T2, T3, T4, T5, T6<,
+//         >T1, T2, T3, T4, T5, T6, T7<,
+//         >T1, T2, T3, T4, T5, T6, T7, T8<);
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -141,7 +148,7 @@ mod tests {
     use std::mem::align_of;
     use super::*;
 
-    macro_rules! is_algin {
+    macro_rules! is_align {
         ($($t:tt),*) => { $({
             let v: $t = 0;
             let p = &v as *const _;
@@ -153,19 +160,19 @@ mod tests {
 
     #[test]
     fn align_guessing() {
-        is_algin!(u8, u16, u32, u64, u128);
+        is_align!(u8, u16, u32, u64, u128);
     }
 
     #[test]
     fn binary_cast() {
-        let v = vec![(4u32, 4u32), (4u32, 4u32), (4u32, 4u32)];
+        let v = vec![[4u32, 4u32], [4u32, 4u32], [4u32, 4u32]];
         let (bytes, a) = v.as_bytes();
-        assert_eq!(a, align_of::<(u32, u32)>());
+        assert_eq!(a, align_of::<[u32; 2]>());
 
-        let s = <&[(u32, u32)]>::from_bytes(bytes).unwrap();
+        let s = <&[[u32; 2]]>::from_bytes(bytes).unwrap();
         assert_eq!(s, &v[..]);
 
-        let a = <Vec<(u32, u32)>>::from_bytes(bytes).unwrap();
+        let a = <Vec<[u32; 2]>>::from_bytes(bytes).unwrap();
         assert_eq!(a, v);
     }
 }

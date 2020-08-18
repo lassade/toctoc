@@ -1,7 +1,7 @@
-use std::alloc::{realloc, alloc, Layout};
+use paste::paste;
+use std::alloc::{alloc, realloc, Layout};
 use std::ptr::null_mut;
 use std::slice::IterMut;
-use paste::paste;
 
 /// Like a byte `Vec` but with underling buffer aligned with `4`
 pub struct Buffer {
@@ -15,21 +15,23 @@ impl Buffer {
         Buffer {
             ptr: null_mut(),
             cap: 0,
-            len: 0
+            len: 0,
         }
     }
 
-    pub fn len(&self) -> usize { self.len }
+    pub fn len(&self) -> usize {
+        self.len
+    }
 
-    pub fn as_ptr(&self) -> *const u8 { self.ptr }
+    pub fn as_ptr(&self) -> *const u8 {
+        self.ptr
+    }
 
-    pub fn as_slice(&self) -> &[u8] { 
+    pub fn as_slice(&self) -> &[u8] {
         if self.cap == 0 {
             &[]
         } else {
-            unsafe {
-                std::slice::from_raw_parts(self.ptr, self.len)
-            }
+            unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
         }
     }
 
@@ -42,9 +44,11 @@ impl Buffer {
                 if self.cap == 0 {
                     alloc(layout)
                 } else {
-                    realloc(self.ptr,
+                    realloc(
+                        self.ptr,
                         Layout::from_size_align_unchecked(self.len, 4),
-                        cap)
+                        cap,
+                    )
                 }
             };
 
@@ -57,12 +61,8 @@ impl Buffer {
         let len = slice.len() + self.len;
         self.reserve(len);
 
-        unsafe  {
-            std::ptr::copy(
-                slice.as_ptr(),
-                self.ptr.add(self.len),
-                slice.len(),
-            );
+        unsafe {
+            std::ptr::copy(slice.as_ptr(), self.ptr.add(self.len), slice.len());
         }
 
         self.len = len;
@@ -73,7 +73,9 @@ impl Buffer {
     pub fn extend_repeating(&mut self, val: u8, times: usize) {
         self.reserve(self.len + times);
         for i in 0..times {
-            unsafe { *self.ptr.add(self.len + i) = val; }
+            unsafe {
+                *self.ptr.add(self.len + i) = val;
+            }
         }
         self.len += times;
     }
@@ -91,18 +93,14 @@ impl Buffer {
     }
 
     pub fn to_vec(self) -> Vec<u8> {
-        unsafe {
-            Vec::from_raw_parts(self.ptr, self.len, self.cap)
-        }
+        unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) }
     }
 
     pub fn iter_mut<'a>(&'a mut self) -> IterMut<'a, u8> {
         if self.cap == 0 {
             [].iter_mut()
         } else {
-            unsafe {
-                std::slice::from_raw_parts_mut(self.ptr, self.len).iter_mut()
-            }
+            unsafe { std::slice::from_raw_parts_mut(self.ptr, self.len).iter_mut() }
         }
     }
 
@@ -135,24 +133,27 @@ impl std::ops::Index<usize> for Buffer {
     type Output = u8;
 
     fn index(&self, index: usize) -> &Self::Output {
-        if index >= self.len { panic!() }
+        if index >= self.len {
+            panic!()
+        }
         unsafe { self.get_unchecked(index) }
     }
 }
 
 impl std::ops::IndexMut<usize> for Buffer {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        if index >= self.len { panic!() }
+        if index >= self.len {
+            panic!()
+        }
         unsafe { self.get_mut_unchecked(index) }
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::bytes::Binary;
     use super::*;
-    
+    use crate::bytes::Binary;
+
     #[test]
     fn write_data() {
         let mut buf = Buffer::new();
@@ -170,13 +171,13 @@ mod tests {
     #[test]
     fn write_data_aligned() {
         let mut buf = Buffer::new();
-        let v = &[(4u32, 4u32), (4u32, 4u32), (4u32, 4u32)][..];
+        let v = &[[4u32, 4u32], [4u32, 4u32], [4u32, 4u32]][..];
         let (b, a) = v.as_bytes();
         buf.write_u8(1);
         let i = buf.extend_from_slice_aligned(b, a);
         assert_eq!((buf[i] as *const u8).align_offset(a), 0);
 
-        let r = <&[(u32, u32)]>::from_bytes(&buf.as_slice()[i..]).unwrap();
+        let r = <&[[u32; 2]]>::from_bytes(&buf.as_slice()[i..]).unwrap();
         assert!(r.iter().eq(v.iter()));
     }
 }

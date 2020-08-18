@@ -1,5 +1,5 @@
-use knocknoc::{Deserialize as KDeserialize, Serialize as KSerialize};
 use knocknoc::bytes::Bytes;
+use knocknoc::{Deserialize as KDeserialize, Serialize as KSerialize};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, KDeserialize, KSerialize)]
@@ -11,32 +11,38 @@ struct V {
 
 #[derive(Clone, Debug, PartialEq, KDeserialize, KSerialize)]
 struct MeshReadOnly<'a> {
-    verts: Bytes<&'a [(u32, u32)]>,
+    verts: Bytes<&'a [[u32; 2]]>,
 }
 
 /// May be used to deserialize primitive types
 #[derive(Deserialize, Serialize)]
-struct Primitive<T>{
+struct Primitive<T> {
     #[serde(rename = "")]
     val: T,
 }
 
 #[test]
 fn test_bson_struct() {
-    let v = V { string: "Hi!".to_owned(), b: false, int: 5, };
+    let v = V {
+        string: "Hi!".to_owned(),
+        b: false,
+        int: 5,
+    };
 
-    let bin = knocknoc::bson::to_bin(&v, & ());
+    let bin = knocknoc::bson::to_bin(&v, &());
 
     let mut ground = vec![];
-    bson::to_bson(&Primitive { val: v.clone() }).unwrap()
-        .as_document().unwrap()
-        .to_writer(&mut ground).unwrap();
-        
+    bson::to_bson(&Primitive { val: v.clone() })
+        .unwrap()
+        .as_document()
+        .unwrap()
+        .to_writer(&mut ground)
+        .unwrap();
+
     assert_eq!(bintext::hex::encode(&bin), bintext::hex::encode(&ground));
 
-    let v1: Primitive<V> = bson::from_bson(
-        bson::Document::from_reader(&mut &bin[..]).unwrap().into()
-    ).unwrap();
+    let v1: Primitive<V> =
+        bson::from_bson(bson::Document::from_reader(&mut &bin[..]).unwrap().into()).unwrap();
 
     assert_eq!(v, v1.val);
 
@@ -45,20 +51,21 @@ fn test_bson_struct() {
 }
 
 macro_rules! test_primitive {
-    ($p:expr, $t:ty) => { {
-        let bin = knocknoc::bson::to_bin(&$p, & ());
-    
+    ($p:expr, $t:ty) => {{
+        let bin = knocknoc::bson::to_bin(&$p, &());
+
         let mut ground = vec![];
         let mut doc = bson::Document::new();
-        doc.entry("".to_string()).or_insert(bson::to_bson(&$p).unwrap());
+        doc.entry("".to_string())
+            .or_insert(bson::to_bson(&$p).unwrap());
         doc.to_writer(&mut ground).unwrap();
-            
+
         assert_eq!(bintext::hex::encode(&bin), bintext::hex::encode(&ground));
-    
+
         let doc = bson::Document::from_reader(&mut &bin[..]).unwrap().into();
         let v1: Primitive<$t> = bson::from_bson(doc).unwrap();
         assert_eq!($p, v1.val);
-    } };
+    }};
 }
 
 #[test]
@@ -71,9 +78,9 @@ fn test_bson_primitive() {
 #[test]
 fn bson_zero_copy() {
     let m0 = MeshReadOnly {
-        verts: Bytes::new(&[(0xAA55AA55, 0), (0, 0), (0, 0), (0, 0)][..]),
+        verts: Bytes::new(&[[0xAA55AA55, 0], [0, 0], [0, 0], [0, 0]][..]),
     };
-    let bson = knocknoc::bson::to_bin(&m0, & ());
+    let bson = knocknoc::bson::to_bin(&m0, &());
     assert_eq!(bson.as_ptr().align_offset(4), 0);
     let m1: MeshReadOnly = knocknoc::bson::from_bin(&bson, &mut ()).unwrap();
     assert_eq!(m0, m1);

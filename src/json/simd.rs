@@ -1,6 +1,6 @@
 use std::mem;
 
-use crate::de::{Deserialize, Map, Seq, Visitor, Context};
+use crate::de::{Context, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 use simd_json::{Node, StaticNode};
 
@@ -61,12 +61,16 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context: &mut dyn Context) -> Result<()> {
+fn from_str_impl<'a>(
+    j: &'a mut [u8],
+    mut visitor: &mut dyn Visitor<'a>,
+    context: &mut dyn Context,
+) -> Result<()> {
     use Node::*;
     use StaticNode::*;
 
     let mut de = Deserializer {
-        i: 1, // First node is always of type `Static(Null)` 
+        i: 1, // First node is always of type `Static(Null)`
         tape: simd_json::to_tape(j).map_err(|_| Error)?,
         stack: Vec::new(),
     };
@@ -76,28 +80,30 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
             Some(Static(Null)) => {
                 visitor.null(context)?;
                 None
-            },
+            }
             Some(Static(Bool(b))) => {
                 visitor.boolean(b)?;
                 None
-            },
+            }
             Some(Static(I64(n))) => {
                 visitor.negative(n, context)?;
                 None
-            },
+            }
             Some(Static(U64(n))) => {
                 visitor.nonnegative(n, context)?;
                 None
-            },
+            }
             Some(Static(F64(n))) => {
                 visitor.double(n)?;
                 None
-            },
+            }
             Some(String(s)) => {
                 if s.starts_with('#') {
                     let mut a = 0;
                     for ch in s.as_bytes().iter().skip(1) {
-                        if *ch != b'-' { break; }
+                        if *ch != b'-' {
+                            break;
+                        }
                         a += 1;
                     }
 
@@ -105,8 +111,7 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
                     #[allow(mutable_transmutes)]
                     let b = unsafe {
                         let s = std::mem::transmute(s);
-                        bintext::hex::decode_slice(s, a + 1, a.max(1))
-                            .map_err(|_| Error)?
+                        bintext::hex::decode_aligned(s, a + 1, a.max(1)).map_err(|_| Error)?
                     };
 
                     visitor.bytes(b, context)?;
@@ -114,15 +119,15 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
                     visitor.string(s, context)?;
                 }
                 None
-            },
+            }
             Some(Array(_, finish)) => {
                 let seq = careful!(visitor.seq()? as Box<dyn Seq>);
                 Some((Layer::Seq(seq), finish))
-            },
+            }
             Some(Object(_, finish)) => {
                 let map = careful!(visitor.map()? as Box<dyn Map>);
                 Some((Layer::Map(map), finish))
-            },
+            }
             _ => None,
         };
 
@@ -148,7 +153,7 @@ fn from_str_impl<'a>(j: &'a mut [u8], mut visitor: &mut dyn Visitor<'a>, context
                     visitor = frame.0;
                     layer = frame.1;
                     finish = frame.2;
-                },
+                }
                 None => break 'outer,
             }
         }

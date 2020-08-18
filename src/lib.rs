@@ -162,16 +162,16 @@ mod careful;
 #[macro_use]
 mod place;
 
+pub mod buffer;
+pub mod bytes;
 mod error;
 mod ignore;
 mod owned;
-pub mod buffer;
-pub mod bytes;
 
-pub mod de;
-pub mod ser;
-pub mod json;
 pub mod bson;
+pub mod de;
+pub mod json;
+pub mod ser;
 
 #[doc(inline)]
 pub use crate::de::Deserialize;
@@ -183,7 +183,6 @@ make_place!(Place);
 
 #[allow(non_camel_case_types)]
 struct private;
-
 
 #[cfg(target_endian = "big")]
 #[allow(unused)]

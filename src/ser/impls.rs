@@ -4,7 +4,7 @@ use std::hash::{BuildHasher, Hash};
 use std::slice;
 
 use crate::private;
-use crate::ser::{Fragment, Map, Seq, Serialize, Context};
+use crate::ser::{Context, Fragment, Map, Seq, Serialize};
 
 impl Context for () {}
 

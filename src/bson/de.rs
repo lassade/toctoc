@@ -1,10 +1,10 @@
-use std::str;
+use paste::paste;
 use std::io::Read;
 use std::mem;
 use std::mem::MaybeUninit;
-use paste::paste;
+use std::str;
 
-use crate::de::{Deserialize, Map, Seq, Visitor, Context};
+use crate::de::{Context, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 
 /// Deserialize a BSON byte vec into any deserializable type.
@@ -66,7 +66,7 @@ macro_rules! read_byte_impl {
 
 /// Provides various functions to read bytes from the inner buffer
 /// and interpreting as little endian bytes many primitive types
-impl<'a, 'b>  Deserializer<'a, 'b> {
+impl<'a, 'b> Deserializer<'a, 'b> {
     read_byte_impl!(u8, i8, u32, i32, u64, i64, f32, f64);
 
     fn read_bytes(&mut self, length: usize) -> Result<&'a [u8]> {
@@ -83,18 +83,20 @@ impl<'a, 'b>  Deserializer<'a, 'b> {
     /// Reads a sequence of bytes until find a '\0' then return it as str
     fn read_cstring(&mut self) -> Result<&'a str> {
         for (mut i, byte) in self.buffer.iter().copied().enumerate() {
-            if byte != 0 { continue }
-            if !byte.is_ascii() { break; }
+            if byte != 0 {
+                continue;
+            }
+            if !byte.is_ascii() {
+                break;
+            }
 
-            unsafe { 
+            unsafe {
                 let ptr = self.buffer.as_ptr();
                 let buf = std::slice::from_raw_parts(ptr, i);
 
                 // Plus 1 because we don't need the '\0' string terminator
                 i += 1;
-                self.buffer = std::slice::from_raw_parts(
-                    ptr.add(i), 
-                    self.buffer.len() - i);
+                self.buffer = std::slice::from_raw_parts(ptr.add(i), self.buffer.len() - i);
                 self.index += i;
 
                 // Not an utf8 string, but an ascii sequence
@@ -115,7 +117,11 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, context: &mut dyn Context) -> Result<()> {
+fn from_bin_impl<'a>(
+    buffer: &'a [u8],
+    mut visitor: &mut dyn Visitor<'a>,
+    context: &mut dyn Context,
+) -> Result<()> {
     // The buffer must be aligned with 4
     if buffer.as_ptr().align_offset(4) != 0 {
         Err(Error)?
@@ -124,7 +130,7 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
     let mut de = Deserializer {
         buffer,
         index: 0,
-        stack: Vec::new()
+        stack: Vec::new(),
     };
 
     de.read_u32()?; // Document size
@@ -137,34 +143,36 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
             0x0A => {
                 visitor.null(context)?;
                 None
-            },
+            }
             0x08 => {
                 let b = de.read_u8()? != 0;
                 visitor.boolean(b)?;
                 None
-            },
+            }
             0x12 => {
                 let n = de.read_i64()?;
                 visitor.negative(n, context)?;
                 None
-            },
+            }
             0x11 => {
                 let n = de.read_u64()?;
                 visitor.nonnegative(n, context)?;
                 None
-            },
+            }
             0x01 => {
                 let n = de.read_f64()?;
                 visitor.double(n)?;
                 None
-            },
-            0x05 => { // Binary
+            }
+            0x05 => {
+                // Binary
                 let size = de.read_u32()?;
                 let b = de.read_bytes(size as usize)?;
                 visitor.bytes(b, context)?;
                 None
-            },
-            0x8F => { // Aligned data!
+            }
+            0x8F => {
+                // Aligned data!
                 let size = de.read_u32()?;
                 let align: u8 = de.read_u8()?;
                 let offset = de.read_u8()?;
@@ -173,15 +181,17 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
 
                 if !align.is_power_of_two()
                     || align == 0 // align is valid
-                    || b.as_ptr().align_offset(align as usize) != 0 // is aligned
+                    || b.as_ptr().align_offset(align as usize) != 0
+                // is aligned
                 {
                     Err(Error)?
                 }
 
                 visitor.bytes(b, context)?;
                 None
-            },
-            0x02 => { // Utf8 String
+            }
+            0x02 => {
+                // Utf8 String
                 let size = de.read_u32()?;
                 let bytes = de.read_bytes((size - 1) as usize)?;
                 // TODO: Maybe implement the `lookup4` algorithm
@@ -192,45 +202,45 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
                 de.read_u8()?; // read the '\0'
                 visitor.string(s, context)?;
                 None
-            },
+            }
             0x81 => {
                 let n = de.read_u8()?;
                 visitor.nonnegative(n as u64, context)?;
                 None
-            },
+            }
             0x82 => {
                 let n = de.read_i8()?;
                 visitor.negative(n as i64, context)?;
                 None
-            },
+            }
             0x83 => {
                 let n = de.read_u32()?;
                 visitor.nonnegative(n as u64, context)?;
                 None
-            },
+            }
             0x10 => {
                 let n = de.read_i32()?;
                 visitor.negative(n as i64, context)?;
                 None
-            },
+            }
             0x85 => {
                 let n = de.read_f32()?;
                 visitor.single(n)?;
                 None
-            },
+            }
             0x04 => {
                 let size = de.read_i32()?;
                 // Subtract 4 bytes of the size it self and 1 of '\0' (end document)
                 let size = size as usize + de.index - 5;
                 let seq = careful!(visitor.seq()? as Box<dyn Seq>);
                 Some((Layer::Seq(seq), size))
-            },
+            }
             0x03 => {
                 let size = de.read_i32()?;
                 let size = size as usize + de.index - 5;
                 let map = careful!(visitor.map()? as Box<dyn Map>);
                 Some((Layer::Map(map), size))
-            },
+            }
             _ => Err(Error)?,
         };
 
@@ -247,7 +257,9 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
 
         // Document ended
         while de.index >= finish {
-            if de.read_u8()? != 0 { Err(Error)? }
+            if de.read_u8()? != 0 {
+                Err(Error)?
+            }
 
             match &mut layer {
                 Layer::Seq(seq) => seq.finish(context)?,
@@ -258,7 +270,7 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
                     visitor = frame.0;
                     layer = frame.1;
                     finish = frame.2;
-                },
+                }
                 None => break 'outer,
             }
         }
@@ -275,9 +287,7 @@ fn from_bin_impl<'a>(buffer: &'a [u8], mut visitor: &mut dyn Visitor<'a>, contex
                 de.stack.push((outer, Layer::Seq(seq), finish));
             }
             Layer::Map(mut map) => {
-                let inner = {
-                    careful!(map.key(e_name)? as &mut dyn Visitor)
-                };
+                let inner = { careful!(map.key(e_name)? as &mut dyn Visitor) };
                 let outer = mem::replace(&mut visitor, inner);
                 de.stack.push((outer, Layer::Map(map), finish));
             }

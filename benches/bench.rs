@@ -2,7 +2,7 @@
 extern crate criterion;
 
 use core::time::Duration;
-use criterion::{BatchSize, Criterion, ParameterizedBenchmark, Throughput, black_box};
+use criterion::{black_box, BatchSize, Criterion, ParameterizedBenchmark, Throughput};
 
 use knocknoc::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
 use serde_derive::{Deserialize, Serialize};
@@ -24,100 +24,100 @@ fn cmp(c: &mut Criterion) {
     let core_ids = core_affinity::get_core_ids().unwrap();
     core_affinity::set_for_current(core_ids[0]);
 
-    c.bench("ser/json", ParameterizedBenchmark::new(
-        "knocknoc",
-        |b, _| {
+    c.bench(
+        "ser/json",
+        ParameterizedBenchmark::new(
+            "knocknoc",
+            |b, _| {
+                b.iter_batched(
+                    || input_struct(),
+                    |value| black_box(knocknoc::json::to_string(&value, &())),
+                    BatchSize::NumIterations(LEN as u64),
+                )
+            },
+            vec![()],
+        )
+        .with_function("serde_json", |b, _| {
             b.iter_batched(
                 || input_struct(),
-                |value| {
-                    black_box(knocknoc::json::to_string(&value, &()))
-                },
+                |value| black_box(serde_json::to_string(&value).unwrap()),
                 BatchSize::NumIterations(LEN as u64),
             )
-        },
-        vec![()],
-    )
-    .with_function("serde_json", |b, _| {
-        b.iter_batched(
-            || input_struct(),
-            |value| {
-                black_box(serde_json::to_string(&value).unwrap())
-            },
-            BatchSize::NumIterations(LEN as u64),
-        )
-    })
-    //.throughput(|d| Throughput::Bytes(d.0.len() as u64))
-    .warm_up_time(WARM_UP_TIME)
-    .measurement_time(MEASUREMENT_TIME));
+        })
+        //.throughput(|d| Throughput::Bytes(d.0.len() as u64))
+        .warm_up_time(WARM_UP_TIME)
+        .measurement_time(MEASUREMENT_TIME),
+    );
 
-    c.bench("de/json", ParameterizedBenchmark::new(
-        "knocknoc",
-        |b, data| {
+    c.bench(
+        "de/json",
+        ParameterizedBenchmark::new(
+            "knocknoc",
+            |b, data| {
+                b.iter_batched(
+                    || data.clone(),
+                    |mut value| black_box(knocknoc::json::from_str::<Twitter>(&mut value, &mut ())),
+                    BatchSize::NumIterations(LEN as u64),
+                )
+            },
+            vec![input_json()],
+        )
+        .with_function("serde_json", |b, data| {
             b.iter_batched(
                 || data.clone(),
-                |mut value| {
-                    black_box(knocknoc::json::from_str::<Twitter>(&mut value, &mut ()))
-                },
+                |value| black_box(serde_json::from_str::<Twitter>(&value).unwrap()),
                 BatchSize::NumIterations(LEN as u64),
             )
-        },
-        vec![input_json()],
-    )
-    .with_function("serde_json", |b, data| {
-        b.iter_batched(
-            || data.clone(),
-            |value| {
-                black_box(serde_json::from_str::<Twitter>(&value).unwrap())
-            },
-            BatchSize::NumIterations(LEN as u64),
-        )
-    })
-    .with_function("simd-json", |b, data| {
-        b.iter_batched(
-            || data.clone(),
-            |mut value| {
-                black_box(simd_json::serde::from_str::<Twitter>(&mut value).unwrap())
-            },
-            BatchSize::NumIterations(LEN as u64),
-        )
-    })
-    .throughput(|d| Throughput::Bytes(d.as_bytes().len() as u64))
-    .warm_up_time(WARM_UP_TIME)
-    .measurement_time(MEASUREMENT_TIME));
-
-    c.bench("ser/bson", ParameterizedBenchmark::new(
-        "knocknoc",
-        |b, _| {
-            b.iter_batched(
-                || input_struct(),
-                |value| {
-                    black_box(knocknoc::bson::to_bin(&value, &mut ()))
-                },
-                BatchSize::NumIterations(LEN as u64),
-            )
-        },
-        vec![()],
-    )
-    //.throughput(|d| Throughput::Bytes(d.0.len() as u64))
-    .warm_up_time(WARM_UP_TIME)
-    .measurement_time(MEASUREMENT_TIME));
-
-    c.bench("de/bson", ParameterizedBenchmark::new(
-        "knocknoc",
-        |b, data| {
+        })
+        .with_function("simd-json", |b, data| {
             b.iter_batched(
                 || data.clone(),
-                |value| {
-                    black_box(knocknoc::bson::from_bin::<Twitter>(&value, &mut ()).unwrap())
-                },
+                |mut value| black_box(simd_json::serde::from_str::<Twitter>(&mut value).unwrap()),
                 BatchSize::NumIterations(LEN as u64),
             )
-        },
-        vec![knocknoc::bson::to_bin(&input_struct(), &())],
-    )
-    .throughput(|d| Throughput::Bytes(d.len() as u64))
-    .warm_up_time(WARM_UP_TIME)
-    .measurement_time(MEASUREMENT_TIME));
+        })
+        .throughput(|d| Throughput::Bytes(d.as_bytes().len() as u64))
+        .warm_up_time(WARM_UP_TIME)
+        .measurement_time(MEASUREMENT_TIME),
+    );
+
+    c.bench(
+        "ser/bson",
+        ParameterizedBenchmark::new(
+            "knocknoc",
+            |b, _| {
+                b.iter_batched(
+                    || input_struct(),
+                    |value| black_box(knocknoc::bson::to_bin(&value, &mut ())),
+                    BatchSize::NumIterations(LEN as u64),
+                )
+            },
+            vec![()],
+        )
+        //.throughput(|d| Throughput::Bytes(d.0.len() as u64))
+        .warm_up_time(WARM_UP_TIME)
+        .measurement_time(MEASUREMENT_TIME),
+    );
+
+    c.bench(
+        "de/bson",
+        ParameterizedBenchmark::new(
+            "knocknoc",
+            |b, data| {
+                b.iter_batched(
+                    || data.clone(),
+                    |value| {
+                        black_box(knocknoc::bson::from_bin::<Twitter>(&value, &mut ()).unwrap())
+                    },
+                    BatchSize::NumIterations(LEN as u64),
+                )
+            },
+            vec![knocknoc::bson::to_bin(&input_struct(), &())],
+        )
+        .throughput(|d| Throughput::Bytes(d.len() as u64))
+        .warm_up_time(WARM_UP_TIME)
+        .measurement_time(MEASUREMENT_TIME),
+    );
 }
 
 criterion_group!(benches, cmp);

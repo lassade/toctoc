@@ -3,9 +3,9 @@ use std::mem;
 use std::str;
 
 use self::Event::*;
-use crate::json::HEX_HINT;
-use crate::de::{Deserialize, Map, Seq, Visitor, Context};
+use crate::de::{Context, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
+use crate::json::HEX_HINT;
 
 /// Deserialize a JSON string into any deserializable type.
 ///
@@ -54,7 +54,11 @@ impl<'a, 'b> Drop for Deserializer<'a, 'b> {
     }
 }
 
-fn from_str_impl<'de>(j: &'de mut str, mut visitor: &mut dyn Visitor<'de>, context: &mut dyn Context) -> Result<()> {
+fn from_str_impl<'de>(
+    j: &'de mut str,
+    mut visitor: &mut dyn Visitor<'de>,
+    context: &mut dyn Context,
+) -> Result<()> {
     let mut de = Deserializer {
         input: j.as_bytes(),
         pos: 0,
@@ -92,7 +96,7 @@ fn from_str_impl<'de>(j: &'de mut str, mut visitor: &mut dyn Visitor<'de>, conte
                     //visitor.bytes(b.as_slice(), context)?;
                     todo!()
                 } else {
-                    // TODO Scape bytes inside the input string 
+                    // TODO Scape bytes inside the input string
                     //visitor.string(s, context)?;
                     todo!()
                 }

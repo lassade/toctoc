@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 use std::mem;
 
+use crate::bytes::guess_align_of;
 use crate::de::{self, Deserialize, Map, Seq, Visitor};
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 use crate::json::{Array, Number, Object};
 use crate::private;
 use crate::ser::{self, Fragment, Serialize};
 use crate::Place;
-use crate::bytes::guess_align_of;
 
 /// Any valid JSON value.
 ///
@@ -58,8 +58,10 @@ impl<'a> Serialize for Value<'a> {
             Value::Number(Number::I64(n)) => Fragment::I64(*n),
             Value::Number(Number::F32(n)) => Fragment::F32(*n), // * MOD: f32 support
             Value::Number(Number::F64(n)) => Fragment::F64(*n),
-            Value::Binary { bytes, align } =>
-                Fragment::Bin { bytes: Cow::Borrowed(bytes), align: *align }, // * MOD: binary data support
+            Value::Binary { bytes, align } => Fragment::Bin {
+                bytes: Cow::Borrowed(bytes),
+                align: *align,
+            }, // * MOD: binary data support
             Value::String(s) => Fragment::Str(Cow::Borrowed(s)),
             Value::Array(array) => private::stream_slice(array),
             Value::Object(object) => private::stream_object(object),
@@ -100,9 +102,9 @@ impl<'a, 'de: 'a> Deserialize<'de> for Value<'a> {
                 Ok(())
             }
 
-            fn seq<'seq>(&'seq mut self) -> Result<Box<dyn Seq<'de> + 'seq>> 
+            fn seq<'seq>(&'seq mut self) -> Result<Box<dyn Seq<'de> + 'seq>>
             where
-                'de: 'seq
+                'de: 'seq,
             {
                 Ok(Box::new(ArrayBuilder {
                     out: &mut self.out,
@@ -113,7 +115,7 @@ impl<'a, 'de: 'a> Deserialize<'de> for Value<'a> {
 
             fn map<'map>(&'map mut self) -> Result<Box<dyn Map<'de> + 'map>>
             where
-                'de: 'map
+                'de: 'map,
             {
                 Ok(Box::new(ObjectBuilder {
                     out: &mut self.out,
@@ -127,7 +129,7 @@ impl<'a, 'de: 'a> Deserialize<'de> for Value<'a> {
                 self.out = Some(Value::Number(Number::F32(n)));
                 Ok(())
             }
-        
+
             fn bytes(&mut self, b: &'de [u8], _: &mut dyn de::Context) -> Result<()> {
                 self.out = Some(Value::Binary {
                     bytes: Cow::Borrowed(b),
@@ -143,7 +145,7 @@ impl<'a, 'de: 'a> Deserialize<'de> for Value<'a> {
             element: Option<Value<'a>>,
         }
 
-        impl<'arr, 'a: 'arr>  ArrayBuilder<'arr, 'a>  {
+        impl<'arr, 'a: 'arr> ArrayBuilder<'arr, 'a> {
             fn shift(&mut self) {
                 if let Some(e) = self.element.take() {
                     self.array.push(e);
@@ -202,12 +204,15 @@ impl<'de> Value<'de> {
     /// Converts a hex string into binary data
     pub fn from_hex(&mut self) -> Result<()> {
         match self {
-            Value::String(ref s) =>
+            Value::String(ref s) => {
                 *self = Value::Binary {
                     bytes: Cow::Owned(bintext::hex::decode_no(s).map_err(|_| Error)?),
                     align: 1, // Lowest possible alignment rank
-                },
-            _ => { return Err(Error); }
+                }
+            }
+            _ => {
+                return Err(Error);
+            }
         }
         Ok(())
     }

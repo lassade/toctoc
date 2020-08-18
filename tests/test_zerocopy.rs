@@ -28,7 +28,7 @@ fn test_zerocopy_to_owned() {
     let j = r#"{ "sender": "you", "text": "hi!" }"#.to_string();
     let m = json::from_str_owned::<Message>(j, &mut ()).unwrap();
 
-    let mo = unsafe { 
+    let mo = unsafe {
         let m = m.as_ref();
         MessageOwned {
             sender: m.sender.to_string(),

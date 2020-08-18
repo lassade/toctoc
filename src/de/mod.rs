@@ -68,7 +68,7 @@
 //! struct MyVec<T>(Vec<T>);
 //!
 //! impl<'de, T: Deserialize<'de>> Visitor<'de> for Place<MyVec<T>> {
-//!     fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+//!     fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
 //!     where
 //!         'de: 'a
 //!     {
@@ -196,7 +196,7 @@ use crate::export::{Asset, Entity};
 /// Trait for data structures that can be deserialized from a JSON string.
 ///
 /// [Refer to the module documentation for examples.][::de]
-pub trait Deserialize<'de> : Sized {
+pub trait Deserialize<'de>: Sized {
     /// The only correct implementation of this method is:
     ///
     /// ```rust
@@ -262,16 +262,16 @@ pub trait Visitor<'de> {
         Err(Error)
     }
 
-    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
     where
-        'de: 'a
+        'de: 'a,
     {
         Err(Error)
     }
-    
+
     fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
     where
-        'de: 'a
+        'de: 'a,
     {
         Err(Error)
     }

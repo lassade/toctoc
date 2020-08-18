@@ -1,6 +1,6 @@
-use std::mem::{align_of, size_of};
-use crate::{ser, de, Result, Error, Place};
 use crate::export::Cow;
+use crate::{de, ser, Error, Place, Result};
+use std::mem::{align_of, size_of};
 
 /// Wrapper around slices or vec to be (de)serialize as bytes
 #[derive(Default, Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -14,10 +14,10 @@ impl<'a, T: Binary<'a>> Bytes<T> {
 
 impl<'a, T: Binary<'a>> ser::Serialize for Bytes<T> {
     fn begin(&self, _: &dyn ser::Context) -> ser::Fragment {
-        let (b, align) =  Binary::as_bytes(&self.0);
+        let (b, align) = Binary::as_bytes(&self.0);
         ser::Fragment::Bin {
             bytes: Cow::Borrowed(b),
-            align, 
+            align,
         }
     }
 }
@@ -47,12 +47,9 @@ impl<'a, T: ByValue + 'a> Binary<'a> for Vec<T> {
     fn as_bytes(&self) -> (&[u8], usize) {
         (
             unsafe {
-                std::slice::from_raw_parts(
-                    self.as_ptr() as *const u8,
-                    self.len() * size_of::<T>()
-                )
+                std::slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * size_of::<T>())
             },
-            align_of::<T>()
+            align_of::<T>(),
         )
     }
 
@@ -68,12 +65,9 @@ impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
     fn as_bytes(&self) -> (&[u8], usize) {
         (
             unsafe {
-                std::slice::from_raw_parts(
-                    self.as_ptr() as *const u8,
-                    self.len() * size_of::<T>()
-                )
+                std::slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * size_of::<T>())
             },
-            align_of::<T>()
+            align_of::<T>(),
         )
     }
 
@@ -84,8 +78,8 @@ impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
 
         unsafe {
             Ok(std::slice::from_raw_parts(
-                bytes.as_ptr() as *const T, 
-                bytes.len() / size_of::<T>()
+                bytes.as_ptr() as *const T,
+                bytes.len() / size_of::<T>(),
             ))
         }
     }
@@ -122,31 +116,28 @@ by_val!(< 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
 //         >T1, T2, T3, T4, T5, T6, T7<,
 //         >T1, T2, T3, T4, T5, T6, T7, T8<);
 
-
 ///////////////////////////////////////////////////////////////////////////////
-
 
 /// Best memory alignment guess.
 ///
-/// Figure out the highest rank alignment of a pointer. 
+/// Figure out the highest rank alignment of a pointer.
 /// A higher the alignment rank have more memory flexibility, which means
 /// it can be casted to any type that require a lower rank alignment.
 pub fn guess_align_of<T>(p: *const T) -> usize {
     const ALIGNMENTS: [usize; 6] = [1, 2, 4, 8, 16, 32];
     let p = p as usize;
-    1 << ALIGNMENTS[..].iter()
-            .position(|a| (*a & p) != 0)
-            .unwrap_or(6)
+    1 << ALIGNMENTS[..]
+        .iter()
+        .position(|a| (*a & p) != 0)
+        .unwrap_or(6)
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
-
 #[cfg(test)]
 mod tests {
-    use std::mem::align_of;
     use super::*;
+    use std::mem::align_of;
 
     macro_rules! is_align {
         ($($t:tt),*) => { $({

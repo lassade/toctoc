@@ -1,7 +1,7 @@
-use knocknoc::json;
-use knocknoc::export::Cow;
 use knocknoc::de::{Deserialize, Visitor};
-use knocknoc::ser::{Serialize, Fragment};
+use knocknoc::export::Cow;
+use knocknoc::json;
+use knocknoc::ser::{Fragment, Serialize};
 
 #[derive(Debug, PartialEq)]
 enum E {
@@ -16,15 +16,23 @@ impl Serialize for E {
         match self {
             E::W { a, b } => {
                 #[derive(knocknoc::Serialize)]
-                struct Proxy<'p> { a: &'p i32, b: &'p i32 }
+                struct Proxy<'p> {
+                    a: &'p i32,
+                    b: &'p i32,
+                }
 
                 struct __Map<'__a> {
                     data: Proxy<'__a>,
                     state: knocknoc::export::usize,
                 }
-    
+
                 impl<'__a> knocknoc::ser::Map for __Map<'__a> {
-                    fn next(&mut self) -> knocknoc::export::Option<(knocknoc::export::Cow<knocknoc::export::str>, &dyn knocknoc::Serialize)> {
+                    fn next(
+                        &mut self,
+                    ) -> knocknoc::export::Option<(
+                        knocknoc::export::Cow<knocknoc::export::str>,
+                        &dyn knocknoc::Serialize,
+                    )> {
                         let __state = self.state;
                         self.state = __state + 1;
                         match __state {
@@ -41,15 +49,20 @@ impl Serialize for E {
                     data: Proxy { a, b },
                     state: 0,
                 }))
-            },
+            }
             E::X(v0, v1) => {
                 struct __Map<'__a> {
                     data: (&'__a i32, &'__a i32),
                     state: knocknoc::export::usize,
                 }
-    
+
                 impl<'__a> knocknoc::ser::Map for __Map<'__a> {
-                    fn next(&mut self) -> knocknoc::export::Option<(knocknoc::export::Cow<knocknoc::export::str>, &dyn knocknoc::Serialize)> {
+                    fn next(
+                        &mut self,
+                    ) -> knocknoc::export::Option<(
+                        knocknoc::export::Cow<knocknoc::export::str>,
+                        &dyn knocknoc::Serialize,
+                    )> {
                         let __state = self.state;
                         self.state = __state + 1;
                         match __state {
@@ -66,15 +79,20 @@ impl Serialize for E {
                     data: (v0, v1),
                     state: 0,
                 }))
-            },
+            }
             E::Y(v0) => {
                 struct __Map<'__a> {
                     data: &'__a i32,
                     state: knocknoc::export::usize,
                 }
-    
+
                 impl<'__a> knocknoc::ser::Map for __Map<'__a> {
-                    fn next(&mut self) -> knocknoc::export::Option<(knocknoc::export::Cow<knocknoc::export::str>, &dyn knocknoc::Serialize)> {
+                    fn next(
+                        &mut self,
+                    ) -> knocknoc::export::Option<(
+                        knocknoc::export::Cow<knocknoc::export::str>,
+                        &dyn knocknoc::Serialize,
+                    )> {
                         let __state = self.state;
                         self.state = __state + 1;
                         match __state {
@@ -91,7 +109,7 @@ impl Serialize for E {
                     data: v0,
                     state: 0,
                 }))
-            },
+            }
             E::Z => Fragment::Str(Cow::Borrowed("Z")),
         }
     }
@@ -102,25 +120,36 @@ knocknoc::make_place!(Place);
 impl<'de> Deserialize<'de> for E {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
         impl<'de> Visitor<'de> for Place<E> {
-            fn string(&mut self, s: &str, _c: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
+            fn string(
+                &mut self,
+                s: &str,
+                _c: &mut dyn knocknoc::de::Context,
+            ) -> knocknoc::Result<()> {
                 match s {
-                    "Z" => { self.out = Some(E::Z); Ok(()) },
+                    "Z" => {
+                        self.out = Some(E::Z);
+                        Ok(())
+                    }
                     _ => Err(knocknoc::Error),
                 }
             }
-        
+
             fn map<'a>(&'a mut self) -> knocknoc::Result<Box<dyn knocknoc::de::Map<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 #[derive(knocknoc::Deserialize)]
                 struct W {
-                    a: i32, b: i32,
+                    a: i32,
+                    b: i32,
                 }
-                
+
                 #[derive(PartialEq)]
                 enum __Var {
-                    None, W, X, Y
+                    None,
+                    W,
+                    X,
+                    Y,
                 }
 
                 #[allow(non_snake_case)]
@@ -131,9 +160,12 @@ impl<'de> Deserialize<'de> for E {
                     Y: knocknoc::export::Option<i32>,
                     __out: &'__a mut knocknoc::export::Option<E>,
                 }
-    
+
                 impl<'__a, 'de> knocknoc::de::Map<'de> for __State<'__a> {
-                    fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor<'de>> {
+                    fn key(
+                        &mut self,
+                        __k: &knocknoc::export::str,
+                    ) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor<'de>> {
                         if self.state != __Var::None {
                             knocknoc::export::Ok(knocknoc::de::Visitor::ignore())
                         } else {
@@ -141,26 +173,43 @@ impl<'de> Deserialize<'de> for E {
                                 "W" => {
                                     self.state = __Var::W;
                                     knocknoc::export::Ok(knocknoc::Deserialize::begin(&mut self.W))
-                                },
+                                }
                                 "X" => {
                                     self.state = __Var::X;
                                     knocknoc::export::Ok(knocknoc::Deserialize::begin(&mut self.X))
-                                },
+                                }
                                 "Y" => {
                                     self.state = __Var::Y;
                                     knocknoc::export::Ok(knocknoc::Deserialize::begin(&mut self.Y))
-                                },
+                                }
                                 _ => knocknoc::export::Ok(knocknoc::de::Visitor::ignore()),
                             }
                         }
                     }
-    
-                    fn finish(&mut self, _: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
+
+                    fn finish(
+                        &mut self,
+                        _: &mut dyn knocknoc::de::Context,
+                    ) -> knocknoc::Result<()> {
                         match self.state {
-                            __Var::W => *self.__out = Some(self.W.as_ref().map(|w| E::W { a: w.a, b: w.b }).ok_or(knocknoc::Error)?),
-                            __Var::X => *self.__out = Some(self.X.map(|x| E::X(x.0, x.1)).ok_or(knocknoc::Error)?),
-                            __Var::Y => *self.__out = Some(self.Y.map(E::Y).ok_or(knocknoc::Error)?),
-                            _ => { return Err(knocknoc::Error); },
+                            __Var::W => {
+                                *self.__out = Some(
+                                    self.W
+                                        .as_ref()
+                                        .map(|w| E::W { a: w.a, b: w.b })
+                                        .ok_or(knocknoc::Error)?,
+                                )
+                            }
+                            __Var::X => {
+                                *self.__out =
+                                    Some(self.X.map(|x| E::X(x.0, x.1)).ok_or(knocknoc::Error)?)
+                            }
+                            __Var::Y => {
+                                *self.__out = Some(self.Y.map(E::Y).ok_or(knocknoc::Error)?)
+                            }
+                            _ => {
+                                return Err(knocknoc::Error);
+                            }
                         }
                         Ok(())
                     }
@@ -187,7 +236,7 @@ fn test_enum() {
         (E::Y(0), r#"{"Y":0}"#),
         (E::Z, r#""Z""#),
     ];
-    
+
     for (val, expected) in cases {
         let actual = json::to_string(val, &mut ());
         assert_eq!(actual, *expected);

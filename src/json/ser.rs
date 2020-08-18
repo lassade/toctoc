@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::ser::{Fragment, Map, Seq, Serialize, Context};
+use crate::ser::{Context, Fragment, Map, Seq, Serialize};
 
 /// Serialize any serializable type into a JSON string.
 ///
@@ -101,18 +101,17 @@ fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
                 } else {
                     out.push_str("null")
                 }
-            },
+            }
             Fragment::Bin { bytes, align } => {
                 let _ = align;
                 out.push_str("\"#");
                 // Extra padding bytes for maneuvering, to ensure alignment
-                for _ in 0..(align/2) {
+                for _ in 0..(align / 2) {
                     out.push_str("--");
                 }
                 out.push_str(&bintext::hex::encode(bytes.as_ref()));
                 out.push('"');
-            },
-            //_ => unimplemented!(),
+            } //_ => unimplemented!(),
         }
 
         loop {

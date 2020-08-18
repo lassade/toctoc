@@ -1,4 +1,4 @@
-use crate::de::{Map, Seq, Visitor, Context};
+use crate::de::{Context, Map, Seq, Visitor};
 use crate::error::Result;
 
 impl<'de> dyn Visitor<'de> {
@@ -22,7 +22,6 @@ impl<'de> Visitor<'de> for Ignore {
         Ok(())
     }
 
-
     fn bytes(&mut self, _b: &'de [u8], _c: &mut dyn Context) -> Result<()> {
         Ok(())
     }
@@ -43,16 +42,16 @@ impl<'de> Visitor<'de> for Ignore {
         Ok(())
     }
 
-    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
     where
-        'de: 'a
+        'de: 'a,
     {
         Ok(Box::new(Ignore))
     }
 
     fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
     where
-        'de: 'a
+        'de: 'a,
     {
         Ok(Box::new(Ignore))
     }

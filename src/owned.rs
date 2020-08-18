@@ -17,18 +17,18 @@ impl<D, T> OwnedRaw<D, T> {
     /// ***Warning*** Rust doesn't support self borrowing thus is
     /// unable to safely handle this reference. Calling `clone`
     /// or `to_owned` on this reference will detach it from the underlying
-    /// data that can be dropped before the cloned ref, resulting in a 
+    /// data that can be dropped before the cloned ref, resulting in a
     /// use after free error.
     pub unsafe fn as_ref(&self) -> &T {
         self.value.as_ref().unwrap()
     }
-    
+
     /// Gets a mutable reference of `T`.
     ///
     /// ***Warning*** Rust doesn't support self borrowing thus is
     /// unable to safely handle this reference. Calling `clone`
     /// or `to_owned` on this reference will detach it from the underlying
-    /// data that can be dropped before the cloned ref, resulting in a 
+    /// data that can be dropped before the cloned ref, resulting in a
     /// use after free error.
     pub unsafe fn as_mut(&mut self) -> &mut T {
         self.value.as_mut().unwrap()

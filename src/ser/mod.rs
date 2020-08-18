@@ -88,8 +88,8 @@
 
 mod impls;
 
-use std::borrow::Cow;
 use crate::export::{Asset, Entity};
+use std::borrow::Cow;
 
 /// One unit of output produced during serialization.
 ///

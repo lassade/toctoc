@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use crate::ser::{Fragment, Map, Seq, Serialize, Context};
 use crate::buffer::Buffer;
+use crate::ser::{Context, Fragment, Map, Seq, Serialize};
 
 /// Serialize any serializable type into a BSON byte vec.
 ///
@@ -49,23 +49,24 @@ impl<'a> Drop for Serializer<'a> {
 
 // Empty document
 macro_rules! empty {
-    ($o:ident) => { {
+    ($o:ident) => {{
         $o.write_u32(1);
         $o.write_u8(0);
-    } };
+    }};
 }
 
 // End document starting at some index
 macro_rules! done {
-    ($o:ident, $index:expr) => { {
+    ($o:ident, $index:expr) => {{
         // End document
         let i = $index as usize;
         let l = $o.len();
-        $o.iter_mut().skip(i)
+        $o.iter_mut()
+            .skip(i)
             .zip(&((l - i + 1) as u32).to_le_bytes()[..])
             .for_each(|(x, a)| *x = *a);
         $o.write_u8(0x00_u8);
-    } };
+    }};
 }
 
 fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
@@ -91,20 +92,29 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
         out.write_u8(0x00); // c_string null terminator
 
         match fragment {
-            Fragment::Null => {},
+            Fragment::Null => {}
             Fragment::Bool(b) => {
                 out[i] = 0x8;
                 out.write_u8(if b { 1_u8 } else { 0_u8 });
-            },
+            }
             Fragment::Str(s) => {
                 out[i] = 0x02;
                 out.write_u32((s.len() + 1) as u32);
                 out.extend_from_slice(&s.as_bytes());
                 out.write_u8(0x00); // '\0'
-            },
-            Fragment::U64(n) => { out[i] = 0x11; out.write_u64(n); },
-            Fragment::I64(n) => { out[i] = 0x10; out.write_i64(n); },
-            Fragment::F64(n) => { out[i] = 0x01; out.write_f64(n); },
+            }
+            Fragment::U64(n) => {
+                out[i] = 0x11;
+                out.write_u64(n);
+            }
+            Fragment::I64(n) => {
+                out[i] = 0x10;
+                out.write_i64(n);
+            }
+            Fragment::F64(n) => {
+                out[i] = 0x01;
+                out.write_f64(n);
+            }
             Fragment::Seq(mut seq) => {
                 out[i] = 0x04;
                 // invariant: `seq` must outlive `first`
@@ -133,14 +143,29 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
                     }
                     None => empty!(out),
                 }
-            },
+            }
             // * MOD: Format new fagment types
             // ? NOTE: These all have custom user defined types
-            Fragment::U8(n) => { out[i] = 0x81; out.write_u8(n); },
-            Fragment::I8(n) => { out[i] = 0x82; out.write_i8(n); },
-            Fragment::U32(n) => { out[i] = 0x83; out.write_u32(n); },
-            Fragment::I32(n) => { out[i] = 0x10; out.write_i32(n); },
-            Fragment::F32(n) => { out[i] = 0x85; out.write_f32(n); },
+            Fragment::U8(n) => {
+                out[i] = 0x81;
+                out.write_u8(n);
+            }
+            Fragment::I8(n) => {
+                out[i] = 0x82;
+                out.write_i8(n);
+            }
+            Fragment::U32(n) => {
+                out[i] = 0x83;
+                out.write_u32(n);
+            }
+            Fragment::I32(n) => {
+                out[i] = 0x10;
+                out.write_i32(n);
+            }
+            Fragment::F32(n) => {
+                out[i] = 0x85;
+                out.write_f32(n);
+            }
             Fragment::Bin { bytes, align } => {
                 if align == 1 {
                     out[i] = 0x05;
@@ -155,7 +180,7 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
                     let offset = (out.extend_from_slice_aligned(&bytes, align) - index - 1) as u8;
                     out[index] = offset;
                 }
-            },
+            }
         }
 
         loop {
@@ -189,5 +214,4 @@ fn to_bin_impl(value: &dyn Serialize, context: &dyn Context) -> Vec<u8> {
             serializer.stack.pop();
         }
     }
-
 }

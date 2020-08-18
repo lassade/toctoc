@@ -3,7 +3,7 @@ use std::hash::{BuildHasher, Hash};
 use std::mem;
 use std::str::FromStr;
 
-use crate::de::{Deserialize, Map, Seq, Visitor, Context};
+use crate::de::{Context, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 use crate::Place;
 
@@ -136,7 +136,7 @@ impl<'de> Deserialize<'de> for f64 {
                 self.out = Some(n as f64);
                 Ok(())
             }
-            
+
             fn single(&mut self, n: f32) -> Result<()> {
                 self.out = Some(n as f64);
                 Ok(())
@@ -167,7 +167,7 @@ impl<'de> Deserialize<'de> for f32 {
                     Err(Error)
                 }
             }
-            
+
             fn single(&mut self, n: f32) -> Result<()> {
                 self.out = Some(n as f32);
                 Ok(())
@@ -180,8 +180,8 @@ impl<'de> Deserialize<'de> for f32 {
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Box<T> {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
         impl<'de, T> Visitor<'de> for Place<Box<T>>
-        where 
-            T: Deserialize<'de>
+        where
+            T: Deserialize<'de>,
         {
             fn null(&mut self, context: &mut dyn Context) -> Result<()> {
                 let mut out = None;
@@ -232,9 +232,9 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Box<T> {
                 Ok(())
             }
 
-            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 let mut value = Box::new(None);
                 let ptr = careful!(&mut *value as &mut Option<T>);
@@ -247,7 +247,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Box<T> {
 
             fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 let mut value = Box::new(None);
                 let ptr = careful!(&mut *value as &mut Option<T>);
@@ -306,8 +306,8 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
     }
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
         impl<'de, T> Visitor<'de> for Place<Option<T>>
-        where 
-            T: Deserialize<'de>
+        where
+            T: Deserialize<'de>,
         {
             fn null(&mut self, _c: &mut dyn Context) -> Result<()> {
                 self.out = Some(None);
@@ -344,9 +344,9 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
                 Deserialize::begin(self.out.as_mut().unwrap()).double(n)
             }
 
-            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 self.out = Some(None);
                 Deserialize::begin(self.out.as_mut().unwrap()).seq()
@@ -354,7 +354,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
 
             fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 self.out = Some(None);
                 Deserialize::begin(self.out.as_mut().unwrap()).map()
@@ -368,9 +368,9 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
 impl<'de, A: Deserialize<'de>, B: Deserialize<'de>> Deserialize<'de> for (A, B) {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
         impl<'de, A: Deserialize<'de>, B: Deserialize<'de>> Visitor<'de> for Place<(A, B)> {
-            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 Ok(Box::new(TupleBuilder {
                     out: &mut self.out,
@@ -412,9 +412,9 @@ impl<'de, A: Deserialize<'de>, B: Deserialize<'de>> Deserialize<'de> for (A, B) 
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
         impl<'de, T: Deserialize<'de>> Visitor<'de> for Place<Vec<T>> {
-            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>> 
+            fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 Ok(Box::new(VecBuilder {
                     out: &mut self.out,
@@ -470,7 +470,7 @@ where
         {
             fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 Ok(Box::new(MapBuilder {
                     out: &mut self.out,
@@ -528,7 +528,7 @@ impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Deserialize<'de> for BTreeMap<K
         impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Visitor<'de> for Place<BTreeMap<K, V>> {
             fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
             where
-                'de: 'a
+                'de: 'a,
             {
                 Ok(Box::new(MapBuilder {
                     out: &mut self.out,

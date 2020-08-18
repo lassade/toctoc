@@ -3,6 +3,7 @@ Knocknoc
 
 *Knocknoc is a miniserde fork with more features guided towards gamedev*
 
+![https://github.com/lassade/knocknoc_forked/blob/main/.github/workflows/rust.yml](https://github.com/lassade/knocknoc_forked/workflows/Build/badge.svg)
 
 ### Extra: Support for u8, i8, u32, i32 and f32
 

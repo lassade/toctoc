@@ -173,6 +173,9 @@ pub mod de;
 pub mod json;
 pub mod ser;
 
+#[target_feature = "serde"]
+mod serde_integration;
+
 #[doc(inline)]
 pub use crate::de::Deserialize;
 pub use crate::error::{Error, Result};

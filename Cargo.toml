@@ -21,6 +21,7 @@ bintext = { path = "../bintext" }
 simd-json = { version = "0.3.14", default-features = false, features = ["swar-number-parsing"], optional = true }
 paste = "1.0.0"
 faster-utf8-validator = { path = "../faster-utf8-validator-rs" }
+serde1 = { name = "serde", version = "1", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
@@ -41,7 +42,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [features]
 default = ["simd"]
 simd = ["simd-json"]
-
+serde = ["serde1"]
 
 [[bench]]
 name = "bench"

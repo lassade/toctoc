@@ -23,7 +23,7 @@ fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenStrea
     let ident = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let dummy = Ident::new(
-        &format!("_IMPL_MINISERIALIZE_FOR_{}", ident),
+        &format!("_IMPL_knocknoc_Serialize_FOR_{}", ident),
         Span::call_site(),
     );
 

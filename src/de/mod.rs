@@ -188,7 +188,7 @@
 //! }
 //! ```
 
-//mod impls;
+mod impls;
 
 use crate::error::{Error, Result};
 use crate::export::{Asset, Entity};
@@ -231,59 +231,59 @@ pub trait Deserialize<'de>: Sized {
 pub trait Visitor<'de> {
     fn null(&mut self, c: &mut dyn Context) -> Result<()> {
         let _ = c;
-        Err(Error)
+        Err(Error)?
     }
 
     fn boolean(&mut self, b: bool) -> Result<()> {
         let _ = b;
-        Err(Error)
+        Err(Error)?
     }
 
     fn string(&mut self, s: &'de str, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = s;
-        Err(Error)
+        Err(Error)?
     }
 
     fn negative(&mut self, n: i64, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = n;
-        Err(Error)
+        Err(Error)?
     }
 
     fn nonnegative(&mut self, n: u64, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = n;
-        Err(Error)
+        Err(Error)?
     }
 
     fn double(&mut self, n: f64) -> Result<()> {
         let _ = n;
-        Err(Error)
+        Err(Error)?
     }
 
     fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
         let _ = s;
         let _ = c;
-        Err(Error)
+        Err(Error)?
     }
 
     fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
         let _ = m;
         let _ = c;
-        Err(Error)
+        Err(Error)?
     }
 
     // * MOD: Extra deserialization functions
     fn single(&mut self, n: f32) -> Result<()> {
         let _ = n;
-        Err(Error)
+        Err(Error)?
     }
 
     fn bytes(&mut self, b: &'de [u8], c: &mut dyn Context) -> Result<()> {
         let _ = b;
         let _ = c;
-        Err(Error)
+        Err(Error)?
     }
 }
 
@@ -309,12 +309,12 @@ pub enum Hint<'a> {
 pub trait Context {
     fn entity(&mut self, e: Hint) -> Result<Entity> {
         let _ = e;
-        Err(Error)
+        Err(Error)?
     }
 
     fn asset(&mut self, a: Hint) -> Result<Asset> {
         let _ = a;
-        Err(Error)
+        Err(Error)?
     }
 }
 

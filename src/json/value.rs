@@ -141,9 +141,8 @@ impl<'a, 'de: 'a> Deserialize<'de> for Value<'a> {
     }
 }
 
-impl<'de> Value<'de> {
-    /// Compare two values to see if they are the exact same
-    pub fn eq<'a, 'other: 'de>(&'a self, other: &'a Value<'other>) -> bool {
+impl<'de> PartialEq<Value<'de>> for Value<'de> {
+    fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Value::Null, Value::Null) => true,
             (Value::Bool(left), Value::Bool(right)) => left == right,
@@ -159,23 +158,14 @@ impl<'de> Value<'de> {
                     align: right1,
                 },
             ) => left0 == right0 && left1 == right1,
-            (Value::Array(left), Value::Array(right)) => {
-                right.len() == left.len()
-                    && left
-                        .into_iter()
-                        .zip(right.into_iter())
-                        .all(|(v0, v1)| v0.eq(v1))
-            }
-            (Value::Object(left), Value::Object(right)) => {
-                right.len() == left.len()
-                    && left
-                        .into_iter()
-                        .all(|(key, val)| right.get(key).map_or(false, |other| other.eq(val)))
-            }
+            (Value::Array(left), Value::Array(right)) => left == right,
+            (Value::Object(left), Value::Object(right)) => left == right,
             _ => false,
         }
     }
+}
 
+impl<'de> Value<'de> {
     /// Converts a hex string into binary data
     pub fn from_hex(&mut self) -> Result<()> {
         match self {
@@ -186,7 +176,7 @@ impl<'de> Value<'de> {
                 }
             }
             _ => {
-                return Err(Error);
+                Err(Error)?;
             }
         }
         Ok(())
@@ -226,12 +216,12 @@ mod tests {
         for (val, json) in cases {
             let mut json = json.to_string();
             let actual: Value = json::from_str(&mut json, &mut ()).unwrap();
-            assert!(actual.eq(val), "expected: {:?}, got: {:?}", val, actual);
+            assert_eq!(val, &actual);
         }
 
         for (val, json) in cases {
             let actual = json::to_string(val, &());
-            assert_eq!(*json, actual);
+            assert_eq!(json, &actual);
         }
     }
 }

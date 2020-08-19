@@ -28,7 +28,7 @@ pub fn from_str<'de, T: Deserialize<'de>>(json: &'de mut str, ctx: &mut dyn Cont
     let mut out = None;
     let mut de = Deserializer::new(json)?;
     de.visit(T::begin(&mut out), ctx)?;
-    out.ok_or(Error)
+    out.ok_or(Error.into())
 }
 
 struct Deserializer<'de> {
@@ -55,6 +55,7 @@ impl<'de> Deserializer<'de> {
             Some(Static(U64(n))) => v.nonnegative(n, c)?,
             Some(Static(F64(n))) => v.double(n)?,
             Some(String(s)) => {
+                // ! FIXME Not good for all occasions
                 if s.starts_with('#') {
                     let mut a = 0;
                     for ch in s.as_bytes().iter().skip(1) {
@@ -112,7 +113,7 @@ impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
             if let Some(String(s)) = self.de.next() {
                 Ok(Some(s))
             } else {
-                Err(Error)
+                Err(Error)?
             }
         } else {
             Ok(None)

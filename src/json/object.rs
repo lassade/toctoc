@@ -10,7 +10,7 @@ use crate::private;
 use crate::ser::{self, Fragment, Serialize};
 
 /// A `BTreeMap<String, Value>` with a non-recursive drop impl.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Object<'de> {
     inner: BTreeMap<String, Value<'de>>,
 }

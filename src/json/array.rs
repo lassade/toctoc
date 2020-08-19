@@ -6,7 +6,7 @@ use std::ptr;
 use crate::json::{drop, Value};
 
 /// A `Vec<Value>` with a non-recursive drop impl.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Array<'de> {
     inner: Vec<Value<'de>>,
 }

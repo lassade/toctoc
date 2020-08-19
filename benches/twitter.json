@@ -733,7 +733,7 @@
         "created_at": "Fri Feb 28 16:04:13 +0000 2014",
         "id": 439430848190742500,
         "id_str": "439430848190742528",
-        "text": "#LEDカツカツ選手権\n漢字一文字ぶんのスペースに「ハウステンボス」を収める狂気 http://t.co/vmrreDMziI",
+        "text": " #LEDカツカツ選手権\n漢字一文字ぶんのスペースに「ハウステンボス」を収める狂気 http://t.co/vmrreDMziI",
         "source": "<a href=\"http://twitter.com\" rel=\"nofollow\">Twitter Web Client</a>",
         "truncated": false,
         "in_reply_to_status_id": null,
@@ -4954,7 +4954,7 @@
         "name": "K",
         "screen_name": "kawazurukenna",
         "location": "",
-        "description": "# I surprise even my self",
+        "description": " # I surprise even my self",
         "url": null,
         "entities": {
           "description": {

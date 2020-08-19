@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::mem;
 
 use crate::bytes::guess_align_of;
 use crate::de::{self, Deserialize, Map, Seq, Visitor};
@@ -102,27 +101,25 @@ impl<'a, 'de: 'a> Deserialize<'de> for Value<'a> {
                 Ok(())
             }
 
-            fn seq<'seq>(&'seq mut self) -> Result<Box<dyn Seq<'de> + 'seq>>
-            where
-                'de: 'seq,
-            {
-                Ok(Box::new(ArrayBuilder {
-                    out: &mut self.out,
-                    array: Array::new(),
-                    element: None,
-                }))
+            fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn de::Context) -> Result<()> {
+                let mut array = Array::new();
+                let mut element: Option<Value> = None;
+                while s.visit(Place::new(&mut element), c)? {
+                    element.take().map(|e| array.push(e));
+                }
+                self.out = Some(Value::Array(array));
+                Ok(())
             }
 
-            fn map<'map>(&'map mut self) -> Result<Box<dyn Map<'de> + 'map>>
-            where
-                'de: 'map,
-            {
-                Ok(Box::new(ObjectBuilder {
-                    out: &mut self.out,
-                    object: Object::new(),
-                    key: None,
-                    value: None,
-                }))
+            fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn de::Context) -> Result<()> {
+                let mut object = Object::new();
+                let mut value: Option<Value> = None;
+                while let Some(key) = m.next()? {
+                    m.visit(Place::new(&mut value), c)?;
+                    value.take().map(|v| object.insert(key.to_owned(), v));
+                }
+                self.out = Some(Value::Object(object));
+                Ok(())
             }
 
             fn single(&mut self, n: f32) -> Result<()> {
@@ -139,68 +136,46 @@ impl<'a, 'de: 'a> Deserialize<'de> for Value<'a> {
             }
         }
 
-        struct ArrayBuilder<'arr, 'a: 'arr> {
-            out: &'arr mut Option<Value<'a>>,
-            array: Array<'a>,
-            element: Option<Value<'a>>,
-        }
-
-        impl<'arr, 'a: 'arr> ArrayBuilder<'arr, 'a> {
-            fn shift(&mut self) {
-                if let Some(e) = self.element.take() {
-                    self.array.push(e);
-                }
-            }
-        }
-
-        impl<'arr, 'a: 'arr, 'de: 'a> Seq<'de> for ArrayBuilder<'arr, 'a> {
-            fn element(&mut self) -> Result<&mut dyn Visitor<'de>> {
-                self.shift();
-                Ok(Deserialize::begin(&mut self.element))
-            }
-
-            fn finish(&mut self, _: &'_ mut dyn de::Context) -> Result<()> {
-                self.shift();
-                *self.out = Some(Value::Array(mem::replace(&mut self.array, Array::new())));
-                Ok(())
-            }
-        }
-
-        struct ObjectBuilder<'obj, 'a: 'obj> {
-            out: &'obj mut Option<Value<'a>>,
-            object: Object<'a>,
-            key: Option<String>,
-            value: Option<Value<'a>>,
-        }
-
-        impl<'obj, 'a: 'obj> ObjectBuilder<'obj, 'a> {
-            fn shift(&mut self) {
-                if let (Some(k), Some(v)) = (self.key.take(), self.value.take()) {
-                    self.object.insert(k, v);
-                }
-            }
-        }
-
-        impl<'obj, 'a: 'obj, 'de: 'a> Map<'de> for ObjectBuilder<'obj, 'a> {
-            fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>> {
-                self.shift();
-                self.key = Some(k.to_owned());
-                Ok(Deserialize::begin(&mut self.value))
-            }
-
-            fn finish(&mut self, _: &'_ mut dyn de::Context) -> Result<()> {
-                self.shift();
-                *self.out = Some(Value::Object(mem::replace(&mut self.object, Object::new())));
-                Ok(())
-            }
-        }
-
         // ! FIXME: Highly unsafe this will remove
         Place::new(out)
     }
 }
 
 impl<'de> Value<'de> {
+    /// Compare two values to see if they are the exact same
+    pub fn eq<'a, 'other: 'de>(&'a self, other: &'a Value<'other>) -> bool {
+        match (self, other) {
+            (Value::Null, Value::Null) => true,
+            (Value::Bool(left), Value::Bool(right)) => left == right,
+            (Value::Number(left), Value::Number(right)) => left == right,
+            (Value::String(left), Value::String(right)) => left == right,
+            (
+                Value::Binary {
+                    bytes: left0,
+                    align: left1,
+                },
+                Value::Binary {
+                    bytes: right0,
+                    align: right1,
+                },
+            ) => left0 == right0 && left1 == right1,
+            (Value::Array(left), Value::Array(right)) => {
+                right.len() == left.len()
+                    && left
+                        .into_iter()
+                        .zip(right.into_iter())
+                        .all(|(v0, v1)| v0.eq(v1))
+            }
+            (Value::Object(left), Value::Object(right)) => {
+                right.len() == left.len()
+                    && left
+                        .into_iter()
+                        .all(|(key, val)| right.get(key).map_or(false, |other| other.eq(val)))
+            }
+            _ => false,
+        }
+    }
+
     /// Converts a hex string into binary data
     pub fn from_hex(&mut self) -> Result<()> {
         match self {
@@ -215,5 +190,48 @@ impl<'de> Value<'de> {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json;
+
+    #[test]
+    fn many_cases() {
+        let cases = &[
+            (Value::Null, "null"),
+            (Value::Number(Number::I64(-1)), "-1"),
+            (Value::Number(Number::F64(1.0)), "1.0"),
+            (
+                Value::Array({
+                    let mut array = Array::new();
+                    array.push(Value::Number(Number::U64(1)));
+                    array.push(Value::Number(Number::U64(2)));
+                    array
+                }),
+                "[1,2]",
+            ),
+            (
+                Value::Object({
+                    let mut object = Object::new();
+                    object.insert("key".to_string(), Value::Number(Number::U64(2)));
+                    object
+                }),
+                r#"{"key":2}"#,
+            ),
+        ];
+
+        for (val, json) in cases {
+            let mut json = json.to_string();
+            let actual: Value = json::from_str(&mut json, &mut ()).unwrap();
+            assert!(actual.eq(val), "expected: {:?}, got: {:?}", val, actual);
+        }
+
+        for (val, json) in cases {
+            let actual = json::to_string(val, &());
+            assert_eq!(*json, actual);
+        }
     }
 }

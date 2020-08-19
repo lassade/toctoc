@@ -188,7 +188,7 @@
 //! }
 //! ```
 
-mod impls;
+//mod impls;
 
 use crate::error::{Error, Result};
 use crate::export::{Asset, Entity};
@@ -262,17 +262,15 @@ pub trait Visitor<'de> {
         Err(Error)
     }
 
-    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
-    where
-        'de: 'a,
-    {
+    fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
+        let _ = s;
+        let _ = c;
         Err(Error)
     }
 
-    fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
-    where
-        'de: 'a,
-    {
+    fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
+        let _ = m;
+        let _ = c;
         Err(Error)
     }
 
@@ -283,26 +281,21 @@ pub trait Visitor<'de> {
     }
 
     fn bytes(&mut self, b: &'de [u8], c: &mut dyn Context) -> Result<()> {
-        let _ = c;
         let _ = b;
+        let _ = c;
         Err(Error)
     }
 }
 
-/// Trait that can hand out places to write sequence elements.
-///
-/// [Refer to the module documentation for examples.][::de]
 pub trait Seq<'de> {
-    fn element(&mut self) -> Result<&mut dyn Visitor<'de>>;
-    fn finish(&mut self, c: &mut dyn Context) -> Result<()>;
+    //fn next(&mut self) -> Result<bool>;
+    //fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()>;
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<bool>;
 }
 
-/// Trait that can hand out places to write values of a map.
-///
-/// [Refer to the module documentation for examples.][::de]
 pub trait Map<'de> {
-    fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>>;
-    fn finish(&mut self, c: &mut dyn Context) -> Result<()>;
+    fn next(&mut self) -> Result<Option<&'de str>>;
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()>;
 }
 
 pub enum Hint<'a> {
@@ -324,3 +317,5 @@ pub trait Context {
         Err(Error)
     }
 }
+
+impl Context for () {}

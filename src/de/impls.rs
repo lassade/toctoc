@@ -7,8 +7,6 @@ use crate::de::{Context, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 use crate::Place;
 
-impl Context for () {}
-
 impl<'de> Deserialize<'de> for () {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
         impl<'de> Visitor<'de> for Place<()> {

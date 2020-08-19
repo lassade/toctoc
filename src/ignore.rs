@@ -42,37 +42,15 @@ impl<'de> Visitor<'de> for Ignore {
         Ok(())
     }
 
-    fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
-    where
-        'de: 'a,
-    {
-        Ok(Box::new(Ignore))
-    }
-
-    fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
-    where
-        'de: 'a,
-    {
-        Ok(Box::new(Ignore))
-    }
-}
-
-impl<'de> Seq<'de> for Ignore {
-    fn element(&mut self) -> Result<&mut dyn Visitor<'de>> {
-        Ok(careful!(&mut Ignore as &mut Ignore))
-    }
-
-    fn finish(&mut self, _c: &mut dyn Context) -> Result<()> {
+    fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
+        while s.visit(&mut Ignore, c)? {}
         Ok(())
     }
-}
 
-impl<'de> Map<'de> for Ignore {
-    fn key(&mut self, _k: &str) -> Result<&mut dyn Visitor<'de>> {
-        Ok(careful!(&mut Ignore as &mut Ignore))
-    }
-
-    fn finish(&mut self, _c: &mut dyn Context) -> Result<()> {
+    fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
+        while let Some(_) = m.next()? {
+            m.visit(&mut Ignore, c)?
+        }
         Ok(())
     }
 }

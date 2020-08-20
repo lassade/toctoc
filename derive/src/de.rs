@@ -25,10 +25,6 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
     let (impl_de_generics, _, _) = input_generics.split_for_impl();
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let dummy = Ident::new(
-        &format!("_IMPL_knocknoc_Deserialize_FOR_{}", ident),
-        Span::call_site(),
-    );
 
     let fieldname = fields.named.iter().map(|f| &f.ident).collect::<Vec<_>>();
     let fieldty = fields.named.iter().map(|f| &f.ty);
@@ -42,8 +38,9 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
     let bounded_where_clause = bound::where_clause_with_bound(&input.generics, bound);
 
     Ok(quote! {
-        #[allow(non_upper_case_globals)]
-        const #dummy: () = {
+        #[doc(hidden)]
+        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        const _: () = {
             use knocknoc as __crate;
 
             #[repr(C)]

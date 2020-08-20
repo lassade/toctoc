@@ -107,6 +107,7 @@ pub struct Visitor<'a> {
 }
 
 impl<'a, S: Serializer> From<&'a mut S> for Visitor<'a> {
+    #[inline(always)]
     fn from(s: &'a mut S) -> Self {
         Visitor { s }
     }

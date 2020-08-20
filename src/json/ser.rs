@@ -174,8 +174,9 @@ impl SerializerSeq for JsonSer {
 
 impl SerializerMap for JsonSer {
     fn field(&mut self, f: &str, s: &dyn Serialize, c: &dyn Context) {
+        self.push(b'\"');
         self.push_str(f);
-        self.push(b':');
+        self.push_str("\":");
         s.begin(self.into(), c);
         self.push(b',');
     }

@@ -1,4 +1,3 @@
-use crate::export::Cow;
 use crate::{de, ser, Error, Place, Result};
 use std::mem::{align_of, size_of};
 
@@ -13,7 +12,7 @@ impl<'a, T: Binary<'a>> Bytes<T> {
 }
 
 impl<'a, T: Binary<'a>> ser::Serialize for Bytes<T> {
-    fn begin(&self, v: ser::Visitor, context: &dyn ser::Context) -> ser::Done {
+    fn begin(&self, v: ser::Visitor, _: &dyn ser::Context) -> ser::Done {
         let (b, align) = Binary::as_bytes(&self.0);
         v.bytes(b, align)
     }

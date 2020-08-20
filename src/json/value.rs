@@ -52,8 +52,8 @@ impl<'a> Serialize for Value<'a> {
         match self {
             Value::Null => v.null(),
             Value::Bool(b) => v.boolean(*b),
-            Value::Number(Number::U64(n)) => v.nonnegative(*n),
-            Value::Number(Number::I64(n)) => v.negative(*n),
+            Value::Number(Number::U64(n)) => v.ulong(*n),
+            Value::Number(Number::I64(n)) => v.long(*n),
             Value::Number(Number::F32(n)) => v.single(*n), // * MOD: f32 support
             Value::Number(Number::F64(n)) => v.double(*n),
             Value::Binary { bytes, align } => v.bytes(bytes, *align),

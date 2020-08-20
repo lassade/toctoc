@@ -113,11 +113,11 @@ impl Serializer for JsonSer {
         self.push_str_escaped(&s);
     }
 
-    fn negative(&mut self, n: i64) {
+    fn long(&mut self, n: i64) {
         self.push_str(itoa::Buffer::new().format(n));
     }
 
-    fn nonnegative(&mut self, n: u64) {
+    fn ulong(&mut self, n: u64) {
         self.push_str(itoa::Buffer::new().format(n));
     }
 

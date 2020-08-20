@@ -1,143 +1,135 @@
 use std::borrow::Cow;
-use std::collections::{btree_map, hash_map, BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::hash::{BuildHasher, Hash};
-use std::slice;
 
-use crate::private;
-use crate::ser::{Context, Fragment, Map, Seq, Serialize};
-
-impl Context for () {}
+use crate::ser::{Context, Done, Serialize, Visitor};
 
 impl Serialize for () {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        Fragment::Null
+    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+        v.null()
     }
 }
 
 impl Serialize for bool {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        Fragment::Bool(*self)
+    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+        v.boolean(*self)
     }
 }
 
 impl Serialize for str {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        Fragment::Str(Cow::Borrowed(self))
+    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+        v.string(self)
     }
 }
 
 impl Serialize for String {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        Fragment::Str(Cow::Borrowed(self))
+    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+        v.string(self)
     }
 }
 
-macro_rules! unsigned {
-    ($ty:ident, $var:ident, $cast:ident) => {
+macro_rules! primitive {
+    ($ty:ident, $method:ident, $cast:ident) => {
         impl Serialize for $ty {
-            fn begin(&self, _c: &dyn Context) -> Fragment {
-                Fragment::$var(*self as $cast)
+            fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+                v.$method(*self as $cast)
             }
         }
     };
 }
-unsigned!(u8, U8, u8);
-unsigned!(u16, U32, u32);
-unsigned!(u32, U32, u32);
-unsigned!(u64, U64, u64);
-unsigned!(usize, U64, u64);
 
-macro_rules! signed {
-    ($ty:ident, $var:ident, $cast:ident) => {
-        impl Serialize for $ty {
-            fn begin(&self, _c: &dyn Context) -> Fragment {
-                Fragment::$var(*self as $cast)
-            }
-        }
-    };
-}
-signed!(i8, I8, i8);
-signed!(i16, I32, i32);
-signed!(i32, I32, i32);
-signed!(i64, I64, i64);
-signed!(isize, I64, i64);
-
-impl Serialize for f32 {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        Fragment::F32(*self)
-    }
-}
-
-impl Serialize for f64 {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        Fragment::F64(*self)
-    }
-}
+primitive!(u8, byte, u8);
+primitive!(u16, uint, u32);
+primitive!(u32, uint, u32);
+primitive!(u64, ulong, u64);
+primitive!(usize, ulong, u64);
+primitive!(i8, sbyte, i8);
+primitive!(i16, int, i32);
+primitive!(i32, int, i32);
+primitive!(i64, long, i64);
+primitive!(isize, long, i64);
+primitive!(f32, single, f32);
+primitive!(f64, double, f64);
 
 impl<'a, T: ?Sized + Serialize> Serialize for &'a T {
-    fn begin(&self, context: &dyn Context) -> Fragment {
-        (**self).begin(context)
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        (**self).begin(v, context)
     }
 }
 
 impl<T: ?Sized + Serialize> Serialize for Box<T> {
-    fn begin(&self, context: &dyn Context) -> Fragment {
-        (**self).begin(context)
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        (**self).begin(v, context)
     }
 }
 
 impl<T: Serialize> Serialize for Option<T> {
-    fn begin(&self, context: &dyn Context) -> Fragment {
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
         match self {
-            Some(some) => some.begin(context),
-            None => Fragment::Null,
+            Some(some) => some.begin(v, context),
+            None => v.null(),
         }
     }
 }
 
 impl<'a, T: ?Sized + ToOwned + Serialize> Serialize for Cow<'a, T> {
-    fn begin(&self, context: &dyn Context) -> Fragment {
-        (**self).begin(context)
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        (**self).begin(v, context)
     }
 }
 
-impl<A: Serialize, B: Serialize> Serialize for (A, B) {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        struct TupleStream<'a> {
-            first: &'a dyn Serialize,
-            second: &'a dyn Serialize,
-            state: usize,
-        }
-
-        impl<'a> Seq for TupleStream<'a> {
-            fn next(&mut self) -> Option<&dyn Serialize> {
-                let state = self.state;
-                self.state += 1;
-                match state {
-                    0 => Some(self.first),
-                    1 => Some(self.second),
-                    _ => None,
-                }
+macro_rules! arrays {
+    ($($n:tt),*) => { $(
+        impl<T: Serialize> Serialize for [T; $n] {
+            fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+                self[..].begin(v, context)
             }
         }
-
-        Fragment::Seq(Box::new(TupleStream {
-            first: &self.0,
-            second: &self.1,
-            state: 0,
-        }))
-    }
+    )*
+    };
 }
 
+arrays!(
+    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
+    28, 29, 30, 31, 32
+);
+
+macro_rules! tuple {
+    ($(<$($n:ident $i:tt),*>),*) => { $(
+        impl<$($n: Serialize,)*> Serialize for ($($n,)*) {
+            fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+                v.seq()
+                $(.element(&self.$i, context))*
+                .done()
+            }
+        }
+    )*
+    };
+}
+
+tuple!(
+    <A 0, B 1>,
+    <A 0, B 1, C 2>,
+    <A 0, B 1, C 2, D 3>,
+    <A 0, B 1, C 2, D 3, E 4>,
+    <A 0, B 1, C 2, D 3, E 4, F 5>,
+    <A 0, B 1, C 2, D 3, E 4, F 5, G 6>,
+    <A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7>
+);
+
 impl<T: Serialize> Serialize for [T] {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        private::stream_slice(self)
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        let mut seq = v.seq();
+        for e in self {
+            seq = seq.element(e, context);
+        }
+        seq.done()
     }
 }
 
 impl<T: Serialize> Serialize for Vec<T> {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        private::stream_slice(self)
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        self.as_slice().begin(v, context)
     }
 }
 
@@ -147,50 +139,21 @@ where
     V: Serialize,
     H: BuildHasher,
 {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        struct HashMapStream<'a, K: 'a, V: 'a>(hash_map::Iter<'a, K, V>);
-
-        impl<'a, K: ToString, V: Serialize> Map for HashMapStream<'a, K, V> {
-            fn next(&mut self) -> Option<(Cow<str>, &dyn Serialize)> {
-                let (k, v) = self.0.next()?;
-                Some((Cow::Owned(k.to_string()), v as &dyn Serialize))
-            }
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        let mut map = v.map();
+        for (k, e) in self {
+            map = map.field(&k.to_string(), e, context);
         }
-
-        Fragment::Map(Box::new(HashMapStream(self.iter())))
+        map.done()
     }
 }
 
 impl<K: ToString, V: Serialize> Serialize for BTreeMap<K, V> {
-    fn begin(&self, _c: &dyn Context) -> Fragment {
-        private::stream_btree_map(self)
-    }
-}
-
-impl private {
-    pub fn stream_slice<T: Serialize>(slice: &[T]) -> Fragment {
-        struct SliceStream<'a, T: 'a>(slice::Iter<'a, T>);
-
-        impl<'a, T: Serialize> Seq for SliceStream<'a, T> {
-            fn next(&mut self) -> Option<&dyn Serialize> {
-                let element = self.0.next()?;
-                Some(element)
-            }
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        let mut map = v.map();
+        for (k, e) in self {
+            map = map.field(&k.to_string(), e, context);
         }
-
-        Fragment::Seq(Box::new(SliceStream(slice.iter())))
-    }
-
-    pub fn stream_btree_map<K: ToString, V: Serialize>(map: &BTreeMap<K, V>) -> Fragment {
-        struct BTreeMapStream<'a, K: 'a, V: 'a>(btree_map::Iter<'a, K, V>);
-
-        impl<'a, K: ToString, V: Serialize> Map for BTreeMapStream<'a, K, V> {
-            fn next(&mut self) -> Option<(Cow<str>, &dyn Serialize)> {
-                let (k, v) = self.0.next()?;
-                Some((Cow::Owned(k.to_string()), v as &dyn Serialize))
-            }
-        }
-
-        Fragment::Map(Box::new(BTreeMapStream(map.iter())))
+        map.done()
     }
 }

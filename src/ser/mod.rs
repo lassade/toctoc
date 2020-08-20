@@ -86,70 +86,182 @@
 //! }
 //! ```
 
-mod impls;
+//mod impls;
 
 use crate::export::{Asset, Entity};
-use std::borrow::Cow;
-
-/// One unit of output produced during serialization.
-///
-/// [Refer to the module documentation for examples.][::ser]
-pub enum Fragment<'a> {
-    Null,
-    Bool(bool),
-    Str(Cow<'a, str>),
-    U64(u64),
-    I64(i64),
-    F64(f64),
-    Seq(Box<dyn Seq + 'a>),
-    Map(Box<dyn Map + 'a>),
-    // * MOD: More types to better support binary formats
-    U8(u8),
-    I8(i8),
-    U32(u32),
-    I32(i32),
-    F32(f32),
-    /// Binary data, should be serialized as hex string when binary
-    /// output is not supported like in json
-    Bin {
-        /// Unaligned binary data
-        bytes: Cow<'a, [u8]>,
-        /// Bytes alignment, must be ensured
-        align: usize,
-    },
-}
 
 /// Trait for data structures that can be serialized to a JSON string.
 ///
 /// [Refer to the module documentation for examples.][::ser]
 pub trait Serialize {
-    fn begin(&self, context: &dyn Context) -> Fragment;
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done;
 }
 
-/// Trait that can iterate elements of a sequence.
-///
-/// [Refer to the module documentation for examples.][::ser]
-pub trait Seq {
-    fn next(&mut self) -> Option<&dyn Serialize>;
+////////////////////////////////////////////////////////////////////////////////
+
+pub struct Done(());
+
+/// Safe interface to proper call `Ser` functions
+pub struct Visitor<'a> {
+    s: &'a mut dyn Serializer,
 }
 
-/// Trait that can iterate key-value entries of a map or struct.
-///
-/// [Refer to the module documentation for examples.][::ser]
-pub trait Map {
-    fn next(&mut self) -> Option<(Cow<str>, &dyn Serialize)>;
+impl<'a, S: Serializer> From<&'a mut S> for Visitor<'a> {
+    fn from(s: &'a mut S) -> Self {
+        Visitor { s }
+    }
+}
+
+impl<'a> Visitor<'a> {
+    #[inline(always)]
+    pub fn null(self) -> Done {
+        self.s.null();
+        Done(())
+    }
+
+    #[inline(always)]
+    pub fn boolean(self, b: bool) -> Done {
+        self.s.boolean(b);
+        Done(())
+    }
+
+    #[inline(always)]
+    pub fn string(self, s: &str) -> Done {
+        self.s.string(s);
+        Done(())
+    }
+
+    #[inline(always)]
+    pub fn negative(self, n: i64) -> Done {
+        self.s.negative(n);
+        Done(())
+    }
+
+    #[inline(always)]
+    pub fn nonnegative(self, n: u64) -> Done {
+        self.s.nonnegative(n);
+        Done(())
+    }
+
+    #[inline(always)]
+    pub fn double(self, n: f64) -> Done {
+        self.s.double(n);
+        Done(())
+    }
+
+    #[inline(always)]
+    pub fn seq(self) -> Seq<'a> {
+        Seq { s: self.s.seq() }
+    }
+
+    #[inline(always)]
+    pub fn map(self) -> Map<'a> {
+        Map { m: self.s.map() }
+    }
+
+    #[inline(always)]
+    pub fn single(self, n: f32) -> Done {
+        self.s.single(n);
+        Done(())
+    }
+
+    #[inline(always)]
+    pub fn bytes(self, b: &[u8], align: usize) -> Done {
+        self.s.bytes(b, align);
+        Done(())
+    }
+}
+
+/// Safe interface to proper call `SerializeSeq` functions
+pub struct Seq<'a> {
+    s: &'a mut dyn SerializerSeq,
+}
+
+impl<'a> Seq<'a> {
+    #[inline(always)]
+    pub fn element(self, s: &dyn Serialize, c: &dyn Context) -> Self {
+        self.s.element(s, c);
+        self
+    }
+
+    #[inline(always)]
+    pub fn done(self) -> Done {
+        self.s.done();
+        Done(())
+    }
+}
+
+/// Safe interface to proper call `SerializeSeq` functions
+pub struct Map<'a> {
+    m: &'a mut dyn SerializerMap,
+}
+
+impl<'a> Map<'a> {
+    #[inline(always)]
+    pub fn field(self, k: &str, s: &dyn Serialize, c: &dyn Context) -> Self {
+        self.m.field(k, s, c);
+        self
+    }
+
+    #[inline(always)]
+    pub fn done(self) -> Done {
+        self.m.done();
+        Done(())
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+pub trait Serializer {
+    fn null(&mut self);
+
+    fn boolean(&mut self, b: bool);
+
+    fn string(&mut self, s: &str);
+
+    fn negative(&mut self, n: i64);
+
+    fn nonnegative(&mut self, n: u64);
+
+    fn double(&mut self, n: f64);
+
+    fn seq(&mut self) -> &mut dyn SerializerSeq;
+
+    fn map(&mut self) -> &mut dyn SerializerMap;
+
+    fn single(&mut self, n: f32);
+
+    fn bytes(&mut self, b: &[u8], align: usize);
+}
+
+pub trait SerializerSeq {
+    fn element(&mut self, s: &dyn Serialize, c: &dyn Context);
+    fn done(&mut self);
+}
+
+pub trait SerializerMap {
+    fn field(&mut self, k: &str, s: &dyn Serialize, c: &dyn Context);
+    fn done(&mut self);
 }
 
 /// Trait that can translate complex types based on some context
 /// into serializable fragments
 pub trait Context {
-    fn entity(&self, e: Entity) -> Fragment {
+    fn entity(&self, e: Entity) -> &dyn Serialize {
         let _ = e;
-        Fragment::Null
+        &()
     }
 
-    fn asset(&self, a: Asset) -> Fragment {
+    fn asset(&self, a: Asset) -> &dyn Serialize {
         let _ = a;
-        Fragment::Null
+        &()
+    }
+}
+
+impl Context for () {}
+
+impl Serialize for () {
+    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+        v.null()
     }
 }

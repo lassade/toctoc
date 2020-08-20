@@ -4,8 +4,7 @@ use crate::bytes::guess_align_of;
 use crate::de::{self, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 use crate::json::{Array, Number, Object};
-use crate::private;
-use crate::ser::{self, Fragment, Serialize};
+use crate::ser::{self, Serialize};
 use crate::Place;
 
 /// Any valid JSON value.
@@ -49,21 +48,30 @@ impl<'a> Default for Value<'a> {
 }
 
 impl<'a> Serialize for Value<'a> {
-    fn begin(&self, _: &dyn ser::Context) -> Fragment {
+    fn begin(&self, v: ser::Visitor, c: &dyn ser::Context) -> ser::Done {
         match self {
-            Value::Null => Fragment::Null,
-            Value::Bool(b) => Fragment::Bool(*b),
-            Value::Number(Number::U64(n)) => Fragment::U64(*n),
-            Value::Number(Number::I64(n)) => Fragment::I64(*n),
-            Value::Number(Number::F32(n)) => Fragment::F32(*n), // * MOD: f32 support
-            Value::Number(Number::F64(n)) => Fragment::F64(*n),
-            Value::Binary { bytes, align } => Fragment::Bin {
-                bytes: Cow::Borrowed(bytes),
-                align: *align,
-            }, // * MOD: binary data support
-            Value::String(s) => Fragment::Str(Cow::Borrowed(s)),
-            Value::Array(array) => private::stream_slice(array),
-            Value::Object(object) => private::stream_object(object),
+            Value::Null => v.null(),
+            Value::Bool(b) => v.boolean(*b),
+            Value::Number(Number::U64(n)) => v.nonnegative(*n),
+            Value::Number(Number::I64(n)) => v.negative(*n),
+            Value::Number(Number::F32(n)) => v.single(*n), // * MOD: f32 support
+            Value::Number(Number::F64(n)) => v.double(*n),
+            Value::Binary { bytes, align } => v.bytes(bytes, *align),
+            Value::String(s) => v.string(s),
+            Value::Array(array) => {
+                let mut seq = v.seq();
+                for e in array.into_iter() {
+                    seq = seq.element(e, c);
+                }
+                seq.done()
+            }
+            Value::Object(object) => {
+                let mut map = v.map();
+                for (k, e) in object.into_iter() {
+                    map = map.field(k, e, c);
+                }
+                map.done()
+            }
         }
     }
 }

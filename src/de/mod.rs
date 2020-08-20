@@ -191,7 +191,7 @@
 mod impls;
 
 use crate::error::{Error, Result};
-use crate::export::{Asset, Entity};
+use crate::export::{Asset, Entity, Hint};
 
 /// Trait for data structures that can be deserialized from a JSON string.
 ///
@@ -296,13 +296,6 @@ pub trait Seq<'de> {
 pub trait Map<'de> {
     fn next(&mut self) -> Result<Option<&'de str>>;
     fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()>;
-}
-
-pub enum Hint<'a> {
-    Null,
-    Number(u64),
-    Str(&'a str),
-    Bytes(&'a [u8]),
 }
 
 /// Trait that can resolves complex types based on some context.

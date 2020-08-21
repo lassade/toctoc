@@ -1,5 +1,5 @@
 use paste::paste;
-use std::alloc::{alloc, realloc, Layout};
+use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::ptr::null_mut;
 use std::slice::IterMut;
 
@@ -62,7 +62,7 @@ impl Buffer {
         self.reserve(len);
 
         unsafe {
-            std::ptr::copy(slice.as_ptr(), self.ptr.add(self.len), slice.len());
+            std::ptr::copy(slice.as_ptr(), self.ptr.add(self.cap), slice.len());
         }
 
         self.len = len;
@@ -112,6 +112,12 @@ impl Buffer {
     #[inline]
     pub unsafe fn get_mut_unchecked(&mut self, index: usize) -> &mut u8 {
         &mut *self.ptr.add(index)
+    }
+}
+
+impl Drop for Buffer {
+    fn drop(&mut self) {
+        unsafe { dealloc(self.ptr, Layout::from_size_align_unchecked(self.cap, 4)) }
     }
 }
 

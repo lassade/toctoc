@@ -21,7 +21,7 @@ bintext = { path = "../bintext" }
 simd-json = { version = "0.3.14", default-features = false, features = ["swar-number-parsing"], optional = true }
 paste = "1.0.0"
 faster-utf8-validator = { path = "../faster-utf8-validator-rs" }
-anyhow = "1.0"
+#anyhow = "1.0"
 
 [dev-dependencies]
 criterion = "0.3"

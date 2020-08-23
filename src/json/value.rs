@@ -179,7 +179,7 @@ impl<'de> Value<'de> {
         match self {
             Value::String(ref s) => {
                 *self = Value::Binary {
-                    bytes: Cow::Owned(bintext::hex::decode_no(s).map_err(|_| Error)?),
+                    bytes: Cow::Owned(bintext::hex::decode_noerr(s).map_err(|_| Error)?),
                     align: 1, // Lowest possible alignment rank
                 }
             }

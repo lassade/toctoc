@@ -1,7 +1,5 @@
-use paste::paste;
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{BuildHasher, Hash};
-use std::mem;
 use std::str::FromStr;
 
 use crate::de::{Context, Deserialize, Map, Seq, Visitor};
@@ -310,50 +308,41 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
     }
 }
 
-// macro_rules! de_tuple {
-//     ($($tt:ident),*) => {
-//         impl<'de, $($tt: Deserialize<'de>,)*> Deserialize<'de> for ($($tt,)*) {
-//             fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
-//                 impl<'de, $($tt: Deserialize<'de>,)*> Visitor<'de> for Place<($($tt,)*)> {
-//                     #[allow(non_snake_case)]
-//                     fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
-//                         $(paste! {
-//                             let mut [<v $tt>] = None;
-//                             s.visit(Deserialize::begin(&mut [<v $tt>]), c)?;
-//                         })*
-//                         self.out = Some((
-//                             $( paste! { [<v $tt>].ok_or(Error)? },)*
-//                         ));
-//                         while s.visit(Visitor::ignore(), c)? {}
-//                         Ok(())
-//                     }
-//                 }
+macro_rules! tuple {
+    ($(<$($n:ident),*>),*) => { $(
+        impl<'de, $($n: Deserialize<'de>,)*> Deserialize<'de> for ($($n,)*) {
+            fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+                impl<'de, $($n: Deserialize<'de>,)*> Visitor<'de> for Place<($($n,)*)> {
+                    #[allow(non_snake_case)]
+                    fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
+                        self.out = Some((
+                        $({
+                            let mut value: Option<$n> = None;
+                            s.visit(Deserialize::begin(&mut value), c)?;
+                            value.ok_or(Error)?
+                        },)*
+                        ));
+                        while s.visit(Visitor::ignore(), c)? {}
+                        Ok(())
+                    }
+                }
 
-//                 Place::new(out)
-//             }
-//         }
-//     };
-// }
-
-//de_tuple!(T0, T1);
-
-impl<'de, A: Deserialize<'de>, B: Deserialize<'de>> Deserialize<'de> for (A, B) {
-    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
-        impl<'de, A: Deserialize<'de>, B: Deserialize<'de>> Visitor<'de> for Place<(A, B)> {
-            fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
-                let mut a = None;
-                s.visit(Deserialize::begin(&mut a), c)?;
-                let mut b = None;
-                s.visit(Deserialize::begin(&mut b), c)?;
-                self.out = Some((a.take().ok_or(Error)?, b.take().ok_or(Error)?));
-                while s.visit(Visitor::ignore(), c)? {}
-                Ok(())
+                Place::new(out)
             }
         }
-
-        Place::new(out)
-    }
+    )*
+    };
 }
+
+tuple!(
+    <A, B>,
+    <A, B, C>,
+    <A, B, C, D>,
+    <A, B, C, D, E>,
+    <A, B, C, D, E, F>,
+    <A, B, C, D, E, F, G>,
+    <A, B, C, D, E, F, G, H>
+);
 
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
@@ -373,122 +362,52 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
     }
 }
 
-// impl<'de, K, V, H> Deserialize<'de> for HashMap<K, V, H>
-// where
-//     K: FromStr + Hash + Eq,
-//     V: Deserialize<'de>,
-//     H: BuildHasher + Default,
-// {
-//     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
-//         impl<'de, K, V, H> Visitor<'de> for Place<HashMap<K, V, H>>
-//         where
-//             K: FromStr + Hash + Eq,
-//             V: Deserialize<'de>,
-//             H: BuildHasher + Default,
-//         {
-//             fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
-//             where
-//                 'de: 'a,
-//             {
-//                 Ok(Box::new(MapBuilder {
-//                     out: &mut self.out,
-//                     map: HashMap::with_hasher(H::default()),
-//                     key: None,
-//                     value: None,
-//                 }))
-//             }
-//         }
+impl<'de, K, V, H> Deserialize<'de> for HashMap<K, V, H>
+where
+    K: FromStr + Hash + Eq,
+    V: Deserialize<'de>,
+    H: BuildHasher + Default,
+{
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+        impl<'de, K, V, H> Visitor<'de> for Place<HashMap<K, V, H>>
+        where
+            K: FromStr + Hash + Eq,
+            V: Deserialize<'de>,
+            H: BuildHasher + Default,
+        {
+            fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
+                let mut hashmap = HashMap::with_hasher(H::default());
+                let mut element = None;
+                while let Some(k) = m.next()? {
+                    let k = K::from_str(k).map_err(|_| Error)?;
+                    m.visit(Deserialize::begin(&mut element), c)?;
+                    element.take().map(|e| hashmap.insert(k, e));
+                }
+                self.out = Some(hashmap);
+                Ok(())
+            }
+        }
 
-//         struct MapBuilder<'a, K: 'a, V: 'a, H: 'a> {
-//             out: &'a mut Option<HashMap<K, V, H>>,
-//             map: HashMap<K, V, H>,
-//             key: Option<K>,
-//             value: Option<V>,
-//         }
+        Place::new(out)
+    }
+}
 
-//         impl<'a, K: Hash + Eq, V, H: BuildHasher> MapBuilder<'a, K, V, H> {
-//             fn shift(&mut self) {
-//                 if let (Some(k), Some(v)) = (self.key.take(), self.value.take()) {
-//                     self.map.insert(k, v);
-//                 }
-//             }
-//         }
+impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Deserialize<'de> for BTreeMap<K, V> {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+        impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Visitor<'de> for Place<BTreeMap<K, V>> {
+            fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
+                let mut btree = BTreeMap::new();
+                let mut element = None;
+                while let Some(k) = m.next()? {
+                    let k = K::from_str(k).map_err(|_| Error)?;
+                    m.visit(Deserialize::begin(&mut element), c)?;
+                    element.take().map(|e| btree.insert(k, e));
+                }
+                self.out = Some(btree);
+                Ok(())
+            }
+        }
 
-//         impl<'de, 'a, K, V, H> Map<'de> for MapBuilder<'a, K, V, H>
-//         where
-//             K: FromStr + Hash + Eq,
-//             V: Deserialize<'de>,
-//             H: BuildHasher + Default,
-//         {
-//             fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>> {
-//                 self.shift();
-//                 self.key = Some(match K::from_str(k) {
-//                     Ok(key) => key,
-//                     Err(_) => return Err(Error),
-//                 });
-//                 Ok(Deserialize::begin(&mut self.value))
-//             }
-
-//             fn finish(&mut self, _: &mut dyn Context) -> Result<()> {
-//                 self.shift();
-//                 let substitute = HashMap::with_hasher(H::default());
-//                 *self.out = Some(mem::replace(&mut self.map, substitute));
-//                 Ok(())
-//             }
-//         }
-
-//         Place::new(out)
-//     }
-// }
-
-// impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Deserialize<'de> for BTreeMap<K, V> {
-//     fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
-//         impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Visitor<'de> for Place<BTreeMap<K, V>> {
-//             fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
-//             where
-//                 'de: 'a,
-//             {
-//                 Ok(Box::new(MapBuilder {
-//                     out: &mut self.out,
-//                     map: BTreeMap::new(),
-//                     key: None,
-//                     value: None,
-//                 }))
-//             }
-//         }
-
-//         struct MapBuilder<'a, K: 'a, V: 'a> {
-//             out: &'a mut Option<BTreeMap<K, V>>,
-//             map: BTreeMap<K, V>,
-//             key: Option<K>,
-//             value: Option<V>,
-//         }
-
-//         impl<'a, K: Ord, V> MapBuilder<'a, K, V> {
-//             fn shift(&mut self) {
-//                 if let (Some(k), Some(v)) = (self.key.take(), self.value.take()) {
-//                     self.map.insert(k, v);
-//                 }
-//             }
-//         }
-
-//         impl<'de, 'a, K: FromStr + Ord, V: Deserialize<'de>> Map<'de> for MapBuilder<'a, K, V> {
-//             fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>> {
-//                 self.shift();
-//                 self.key = Some(match K::from_str(k) {
-//                     Ok(key) => key,
-//                     Err(_) => return Err(Error),
-//                 });
-//                 Ok(Deserialize::begin(&mut self.value))
-//             }
-
-//             fn finish(&mut self, _: &mut dyn Context) -> Result<()> {
-//                 self.shift();
-//                 *self.out = Some(mem::replace(&mut self.map, BTreeMap::new()));
-//                 Ok(())
-//             }
-//         }
-
-//         Place::new(out)
-//     }
-// }
+        Place::new(out)
+    }
+}

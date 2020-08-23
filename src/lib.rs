@@ -168,7 +168,7 @@ mod error;
 mod ignore;
 mod owned;
 
-//pub mod bson;
+pub mod bson;
 pub mod de;
 pub mod json;
 pub mod ser;

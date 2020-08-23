@@ -23,7 +23,7 @@ impl Serialize for E {
                 v.map().field("W", &Inner { a: a, b: b }, c).done()
             }
             E::X(v0, v1) => v.map().field("X", &(v0, v1), c).done(),
-            E::Y(v0) => v.map().field("X", &(v0), c).done(),
+            E::Y(v0) => v.map().field("Y", &(v0), c).done(),
             E::Z => v.string("Z"),
         }
     }

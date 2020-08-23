@@ -43,7 +43,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 default = ["simd"]
 simd = ["simd-json"] # SIMD deserialization
 any-context = [] # Context will be std::any::Any
-
+deeply-nested = [] # Manipulates the stack to (de)serialize deeply nested structs
 
 [[bench]]
 name = "bench"

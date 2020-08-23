@@ -26,17 +26,17 @@ use simd_json::{Node, StaticNode};
 /// ```
 pub fn from_str<'de, T: Deserialize<'de>>(json: &'de mut str, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    let mut de = Deserializer::new(json)?;
+    let mut de = JsonDe::new(json)?;
     de.visit(T::begin(&mut out), ctx)?;
     out.ok_or(Error.into())
 }
 
-struct Deserializer<'de> {
+struct JsonDe<'de> {
     index: usize,
     tape: Vec<Node<'de>>,
 }
 
-impl<'de> Deserializer<'de> {
+impl<'de> JsonDe<'de> {
     fn new(json: &'de mut str) -> Result<Self> {
         Ok(Self {
             index: 1, // First node is always of type `Static(Null)`,
@@ -91,13 +91,13 @@ impl<'de> Deserializer<'de> {
 
 struct Stack<'a, 'de: 'de> {
     e: usize,
-    de: &'a mut Deserializer<'de>,
+    de: &'a mut JsonDe<'de>,
 }
 
 impl<'a, 'de: 'de> Seq<'de> for Stack<'a, 'de> {
     fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<bool> {
         if self.de.index < self.e {
-            Deserializer::visit(self.de, v, c)?;
+            JsonDe::visit(self.de, v, c)?;
             Ok(true)
         } else {
             Ok(false)
@@ -121,11 +121,11 @@ impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
     }
 
     fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
-        Deserializer::visit(self.de, v, c)
+        JsonDe::visit(self.de, v, c)
     }
 }
 
-impl<'de> Iterator for Deserializer<'de> {
+impl<'de> Iterator for JsonDe<'de> {
     type Item = Node<'de>;
 
     fn next(&mut self) -> Option<Self::Item> {

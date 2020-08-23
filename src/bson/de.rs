@@ -1,6 +1,5 @@
 use paste::paste;
 use std::io::Read;
-use std::mem;
 use std::mem::MaybeUninit;
 use std::str;
 
@@ -33,19 +32,16 @@ use crate::error::{Error, Result};
 /// ```
 pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    from_bin_impl(b, T::begin(&mut out), ctx)?;
-    out.ok_or(Error)
+    let bson = BsonDe::new(b)?;
+    bson.deserialize(T::begin(&mut out), ctx)?;
+    out.ok_or(Error.into())
 }
 
-enum Layer<'a> {
-    Seq(Box<dyn Seq<'a> + 'a>),
-    Map(Box<dyn Map<'a> + 'a>),
-}
-
-struct Deserializer<'a, 'b> {
-    buffer: &'a [u8],
+struct BsonDe<'de> {
+    buffer: &'de [u8],
     index: usize,
-    stack: Vec<(&'b mut dyn Visitor<'a>, Layer<'b>, usize)>,
+    ty: u8,
+    key: &'de str,
 }
 
 macro_rules! read_byte_impl {
@@ -66,10 +62,146 @@ macro_rules! read_byte_impl {
 
 /// Provides various functions to read bytes from the inner buffer
 /// and interpreting as little endian bytes many primitive types
-impl<'a, 'b> Deserializer<'a, 'b> {
+impl<'de> BsonDe<'de> {
+    fn new(buffer: &'de [u8]) -> Result<Self> {
+        // The buffer must be aligned with 4
+        if buffer.as_ptr().align_offset(4) != 0 {
+            Err(Error)?
+        }
+
+        let de = Self {
+            buffer,
+            index: 0,
+            ty: 0,
+            key: "",
+        };
+
+        Ok(de)
+    }
+
+    fn deserialize(mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+        // Root document size
+        self.read_u32()? as usize;
+
+        self.next()?;
+        self.visit(v, c)?;
+
+        // Document done and all input was consumed
+        if self.read_u8()? != 0 || self.buffer.len() != 0 {
+            Err(Error)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn next(&mut self) -> Result<()> {
+        self.ty = self.read_u8()?;
+        self.key = self.read_cstring()?; // Always empty
+        Ok(())
+    }
+
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+        match self.ty {
+            0x0A => {
+                v.null(c)?;
+            }
+            0x08 => {
+                let b = self.read_u8()? != 0;
+                v.boolean(b)?;
+            }
+            0x12 => {
+                let n = self.read_i64()?;
+                v.negative(n, c)?;
+            }
+            0x11 => {
+                let n = self.read_u64()?;
+                v.nonnegative(n, c)?;
+            }
+            0x01 => {
+                let n = self.read_f64()?;
+                v.double(n)?;
+            }
+            0x05 => {
+                // Binary
+                let size = self.read_u32()?;
+                let b = self.read_bytes(size as usize)?;
+                v.bytes(b, c)?;
+            }
+            0x8F => {
+                // Aligned data!
+                let size = self.read_u32()?;
+                let align: u8 = self.read_u8()?;
+                let offset = self.read_u8()?;
+                self.read_bytes(offset as usize)?;
+                let b = self.read_bytes(size as usize)?;
+
+                // Error if isn't aligned or not valid align
+                if !align.is_power_of_two()
+                    || align == 0
+                    || b.as_ptr().align_offset(align as usize) != 0
+                {
+                    Err(Error)?
+                }
+
+                v.bytes(b, c)?;
+            }
+            0x02 => {
+                // Utf8 String
+                let size = self.read_u32()?;
+                let bytes = self.read_bytes((size - 1) as usize)?;
+                // TODO: Maybe implement the `lookup4` algorithm
+                if !faster_utf8_validator::validate(bytes) {
+                    Err(Error)?
+                }
+                let s = unsafe { str::from_utf8_unchecked(bytes) };
+                self.read_u8()?; // read the '\0'
+                v.string(s, c)?;
+            }
+            0x81 => {
+                let n = self.read_u8()?;
+                v.nonnegative(n as u64, c)?;
+            }
+            0x82 => {
+                let n = self.read_i8()?;
+                v.negative(n as i64, c)?;
+            }
+            0x83 => {
+                let n = self.read_u32()?;
+                v.nonnegative(n as u64, c)?;
+            }
+            0x10 => {
+                let n = self.read_i32()?;
+                v.negative(n as i64, c)?;
+            }
+            0x85 => {
+                let n = self.read_f32()?;
+                v.single(n)?;
+            }
+            0x04 => {
+                let size = self.read_i32()?;
+                // Subtract 4 bytes of the size it self and 1 of '\0' (end document)
+                let e = size as usize + self.index - 5;
+                let mut stack = Stack { e, de: self };
+                v.seq(&mut stack, c)?;
+                self.read_u8()?; // '\0' (end document)
+                self.index = e + 5;
+            }
+            0x03 => {
+                let size = self.read_i32()?;
+                let e = size as usize + self.index - 5;
+                let mut stack = Stack { e, de: self };
+                v.map(&mut stack, c)?;
+                self.read_u8()?; // '\0' (end document)
+                self.index = e + 5;
+            }
+            _ => Err(Error)?, // Unknown type
+        }
+        Ok(())
+    }
+
     read_byte_impl!(u8, i8, u32, i32, u64, i64, f32, f64);
 
-    fn read_bytes(&mut self, length: usize) -> Result<&'a [u8]> {
+    fn read_bytes(&mut self, length: usize) -> Result<&'de [u8]> {
         if length < self.buffer.len() {
             let (buf, rem) = self.buffer.split_at(length);
             self.buffer = rem;
@@ -81,7 +213,7 @@ impl<'a, 'b> Deserializer<'a, 'b> {
     }
 
     /// Reads a sequence of bytes until find a '\0' then return it as str
-    fn read_cstring(&mut self) -> Result<&'a str> {
+    fn read_cstring(&mut self) -> Result<&'de str> {
         for (mut i, byte) in self.buffer.iter().copied().enumerate() {
             if byte != 0 {
                 continue;
@@ -108,196 +240,34 @@ impl<'a, 'b> Deserializer<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Drop for Deserializer<'a, 'b> {
-    fn drop(&mut self) {
-        // Drop layers in reverse order.
-        while !self.stack.is_empty() {
-            self.stack.pop();
+struct Stack<'a, 'de: 'de> {
+    e: usize,
+    de: &'a mut BsonDe<'de>,
+}
+
+impl<'a, 'de: 'de> Seq<'de> for Stack<'a, 'de> {
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<bool> {
+        if self.de.index < self.e {
+            self.de.next()?;
+            self.de.visit(v, c)?;
+            Ok(true)
+        } else {
+            Ok(false)
         }
     }
 }
 
-fn from_bin_impl<'a>(
-    buffer: &'a [u8],
-    mut visitor: &mut dyn Visitor<'a>,
-    context: &mut dyn Context,
-) -> Result<()> {
-    // The buffer must be aligned with 4
-    if buffer.as_ptr().align_offset(4) != 0 {
-        Err(Error)?
-    }
-
-    let mut de = Deserializer {
-        buffer,
-        index: 0,
-        stack: Vec::new(),
-    };
-
-    de.read_u32()?; // Document size
-    let mut _type = de.read_u8()?;
-    let mut e_name;
-    de.read_cstring()?; // Always empty
-
-    'outer: loop {
-        let tuple = match _type {
-            0x0A => {
-                visitor.null(context)?;
-                None
-            }
-            0x08 => {
-                let b = de.read_u8()? != 0;
-                visitor.boolean(b)?;
-                None
-            }
-            0x12 => {
-                let n = de.read_i64()?;
-                visitor.negative(n, context)?;
-                None
-            }
-            0x11 => {
-                let n = de.read_u64()?;
-                visitor.nonnegative(n, context)?;
-                None
-            }
-            0x01 => {
-                let n = de.read_f64()?;
-                visitor.double(n)?;
-                None
-            }
-            0x05 => {
-                // Binary
-                let size = de.read_u32()?;
-                let b = de.read_bytes(size as usize)?;
-                visitor.bytes(b, context)?;
-                None
-            }
-            0x8F => {
-                // Aligned data!
-                let size = de.read_u32()?;
-                let align: u8 = de.read_u8()?;
-                let offset = de.read_u8()?;
-                de.read_bytes(offset as usize)?;
-                let b = de.read_bytes(size as usize)?;
-
-                if !align.is_power_of_two()
-                    || align == 0 // align is valid
-                    || b.as_ptr().align_offset(align as usize) != 0
-                // is aligned
-                {
-                    Err(Error)?
-                }
-
-                visitor.bytes(b, context)?;
-                None
-            }
-            0x02 => {
-                // Utf8 String
-                let size = de.read_u32()?;
-                let bytes = de.read_bytes((size - 1) as usize)?;
-                // TODO: Maybe implement the `lookup4` algorithm
-                if !faster_utf8_validator::validate(bytes) {
-                    Err(Error)?
-                }
-                let s = unsafe { str::from_utf8_unchecked(bytes) };
-                de.read_u8()?; // read the '\0'
-                visitor.string(s, context)?;
-                None
-            }
-            0x81 => {
-                let n = de.read_u8()?;
-                visitor.nonnegative(n as u64, context)?;
-                None
-            }
-            0x82 => {
-                let n = de.read_i8()?;
-                visitor.negative(n as i64, context)?;
-                None
-            }
-            0x83 => {
-                let n = de.read_u32()?;
-                visitor.nonnegative(n as u64, context)?;
-                None
-            }
-            0x10 => {
-                let n = de.read_i32()?;
-                visitor.negative(n as i64, context)?;
-                None
-            }
-            0x85 => {
-                let n = de.read_f32()?;
-                visitor.single(n)?;
-                None
-            }
-            0x04 => {
-                let size = de.read_i32()?;
-                // Subtract 4 bytes of the size it self and 1 of '\0' (end document)
-                let size = size as usize + de.index - 5;
-                let seq = careful!(visitor.seq()? as Box<dyn Seq>);
-                Some((Layer::Seq(seq), size))
-            }
-            0x03 => {
-                let size = de.read_i32()?;
-                let size = size as usize + de.index - 5;
-                let map = careful!(visitor.map()? as Box<dyn Map>);
-                Some((Layer::Map(map), size))
-            }
-            _ => Err(Error)?,
-        };
-
-        let (mut layer, mut finish) = match tuple {
-            Some(t) => t,
-            None => match de.stack.pop() {
-                Some(frame) => {
-                    visitor = frame.0;
-                    (frame.1, frame.2)
-                }
-                None => break 'outer,
-            },
-        };
-
-        // Document ended
-        while de.index >= finish {
-            if de.read_u8()? != 0 {
-                Err(Error)?
-            }
-
-            match &mut layer {
-                Layer::Seq(seq) => seq.finish(context)?,
-                Layer::Map(map) => map.finish(context)?,
-            }
-            match de.stack.pop() {
-                Some(frame) => {
-                    visitor = frame.0;
-                    layer = frame.1;
-                    finish = frame.2;
-                }
-                None => break 'outer,
-            }
-        }
-
-        // Update type and e_name
-        _type = de.read_u8()?;
-        e_name = de.read_cstring()?;
-
-        // Push layer back
-        match layer {
-            Layer::Seq(mut seq) => {
-                let inner = careful!(seq.element()? as &mut dyn Visitor);
-                let outer = mem::replace(&mut visitor, inner);
-                de.stack.push((outer, Layer::Seq(seq), finish));
-            }
-            Layer::Map(mut map) => {
-                let inner = { careful!(map.key(e_name)? as &mut dyn Visitor) };
-                let outer = mem::replace(&mut visitor, inner);
-                de.stack.push((outer, Layer::Map(map), finish));
-            }
+impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
+    fn next(&mut self) -> Result<Option<&'de str>> {
+        if self.de.index < self.e {
+            self.de.next()?;
+            Ok(Some(self.de.key))
+        } else {
+            Ok(None)
         }
     }
 
-    // Document done and all input was consumed
-    if de.read_u8()? != 0 || de.buffer.len() != 0 {
-        Err(Error)
-    } else {
-        Ok(())
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+        self.de.visit(v, c)
     }
 }

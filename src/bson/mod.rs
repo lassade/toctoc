@@ -13,8 +13,8 @@
 mod ser;
 pub use self::ser::to_bin;
 
-// mod de;
-// pub use self::de::from_bin;
+mod de;
+pub use self::de::from_bin;
 
-// mod owned;
-// pub use self::owned::{from_bin_owned, Owned};
+mod owned;
+pub use self::owned::{from_bin_owned, Owned};

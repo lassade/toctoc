@@ -1,5 +1,4 @@
 use knocknoc::de::{self, Deserialize};
-use knocknoc::export::Cow;
 use knocknoc::json;
 use knocknoc::ser::{self, Done, Serialize};
 
@@ -23,18 +22,8 @@ impl Serialize for E {
 
                 v.map().field("W", &Inner { a: a, b: b }, c).done()
             }
-            E::X(v0, v1) => {
-                #[derive(knocknoc::Serialize)]
-                struct Inner<'a>(&'a i32, &'a i32);
-
-                v.map().field("X", &Inner(v0, v1), c).done()
-            }
-            E::Y(v0) => {
-                #[derive(knocknoc::Serialize)]
-                struct Inner<'a>(&'a i32);
-
-                v.map().field("X", &Inner(v0), c).done()
-            }
+            E::X(v0, v1) => v.map().field("X", &(v0, v1), c).done(),
+            E::Y(v0) => v.map().field("X", &(v0), c).done(),
             E::Z => v.string("Z"),
         }
     }
@@ -42,6 +31,7 @@ impl Serialize for E {
 
 knocknoc::make_place!(Place);
 
+#[allow(unused_parens)]
 impl<'de> Deserialize<'de> for E {
     fn begin(out: &mut Option<Self>) -> &mut dyn de::Visitor<'de> {
         impl<'de> de::Visitor<'de> for Place<E> {
@@ -74,24 +64,18 @@ impl<'de> Deserialize<'de> for E {
                         self.out = Some(E::W { a: v.a, b: v.b });
                     }
                     Some("X") => {
-                        #[derive(knocknoc::Deserialize)]
-                        struct Inner(i32, i32);
-
-                        let mut v = None;
-                        m.visit(Inner::begin(&mut v), c)?;
+                        let mut v: Option<(i32, i32)> = None;
+                        m.visit(knocknoc::de::Deserialize::begin(&mut v), c)?;
                         let v = v.unwrap();
                         self.out = Some(E::X(v.0, v.1));
                     }
                     Some("Y") => {
-                        #[derive(knocknoc::Deserialize)]
-                        struct Inner(i32);
-
-                        let mut v = None;
-                        m.visit(Inner::begin(&mut v), c)?;
+                        let mut v: Option<(i32)> = None;
+                        m.visit(knocknoc::de::Deserialize::begin(&mut v), c)?;
                         let v = v.unwrap();
-                        self.out = Some(E::Y(v.0));
+                        self.out = Some(E::Y(v));
                     }
-                    _ => Err(knocknoc::Error)?,
+                    _ => m.visit(knocknoc::de::Visitor::ignore(), c)?,
                 }
 
                 Ok(())

@@ -299,6 +299,7 @@ pub trait Map<'de> {
 }
 
 /// Trait that can resolves complex types based on some context.
+#[cfg(not(feature = "any-context"))]
 pub trait Context {
     fn entity(&mut self, e: Hint) -> Result<Entity> {
         let _ = e;
@@ -311,4 +312,8 @@ pub trait Context {
     }
 }
 
+#[cfg(not(feature = "any-context"))]
 impl Context for () {}
+
+#[cfg(feature = "any-context")]
+pub type Context = std::any::Any;

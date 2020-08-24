@@ -88,7 +88,7 @@ impl<'de> BsonDe<'de> {
 
         // Document done and all input was consumed
         if self.read_u8()? != 0 || self.buffer.len() != 0 {
-            Err(Error)
+            Err(Error.into())
         } else {
             Ok(())
         }
@@ -96,7 +96,7 @@ impl<'de> BsonDe<'de> {
 
     fn next(&mut self) -> Result<()> {
         self.ty = self.read_u8()?;
-        self.key = self.read_cstring()?; // Always empty
+        self.key = self.read_cstring()?;
         Ok(())
     }
 
@@ -208,7 +208,7 @@ impl<'de> BsonDe<'de> {
             self.index += length;
             Ok(buf)
         } else {
-            Err(Error)
+            Err(Error.into())
         }
     }
 
@@ -236,7 +236,7 @@ impl<'de> BsonDe<'de> {
             }
         }
 
-        Err(Error)
+        Err(Error.into())
     }
 }
 

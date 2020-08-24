@@ -184,7 +184,7 @@ impl<'de> BsonDe<'de> {
                 let mut stack = Stack { e, de: self };
                 v.seq(&mut stack, c)?;
                 self.read_u8()?; // '\0' (end document)
-                self.index = e + 5;
+                self.index = e + 1; // No matter what skip the entire document
             }
             0x03 => {
                 let size = self.read_i32()?;
@@ -192,7 +192,7 @@ impl<'de> BsonDe<'de> {
                 let mut stack = Stack { e, de: self };
                 v.map(&mut stack, c)?;
                 self.read_u8()?; // '\0' (end document)
-                self.index = e + 5;
+                self.index = e + 1; // No matter what skip the entire document
             }
             _ => Err(Error)?, // Unknown type
         }

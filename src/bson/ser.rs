@@ -33,6 +33,8 @@ struct BsonSer<'a> {
     buffer: Buffer,
     doc: Vec<usize>,
     field: Option<&'a str>,
+    /// Alignment field metadata
+    align: usize,
 }
 
 impl<'a> BsonSer<'a> {
@@ -41,9 +43,18 @@ impl<'a> BsonSer<'a> {
             buffer: Buffer::new(),
             doc: vec![],
             field: None,
+            align: Buffer::ALIGNMENT, // Default alignment
         };
+
         // Root document
         bson.begin_doc();
+
+        if cfg!(feature = "higher-rank-alignment") {
+            // Serialize the alignment requirement as the first document field
+            bson.field = Some("align");
+            bson.byte(bson.align as u8);
+            assert_eq!(bson.buffer.len(), 12); // Make sure the alignment is the 11th byte on buffer
+        }
 
         bson
     }
@@ -154,6 +165,23 @@ impl<'a> Serializer for BsonSer<'a> {
             self.element(0x8F); // Aligned data!
             self.buffer.write_u32(b.len() as u32);
             self.buffer.write_u8(a as u8);
+
+            if a > self.align {
+                if cfg!(feature = "higher-rank-alignment") {
+                    // Buffer must now have a higher least have this align
+                    self.align = a;
+                    self.buffer[11] = a as u8;
+                } else {
+                    // Sorry, a panic now is better than later figuring the data can't be properly read
+                    unimplemented!(
+                        "{} is higher alignment than the default {} isn't supported,\
+                        consider enable the `higher-rank-alignment` feature",
+                        a,
+                        Buffer::ALIGNMENT
+                    )
+                }
+            }
+
             let index = self.buffer.len();
             self.buffer.write_u8(0); // Data offset
             let offset = (self.buffer.extend_from_slice_aligned(&b, a) - index - 1) as u8;

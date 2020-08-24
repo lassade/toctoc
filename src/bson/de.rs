@@ -3,10 +3,12 @@ use std::io::Read;
 use std::mem::MaybeUninit;
 use std::str;
 
+use crate::buffer::Buffer;
+use crate::bytes::guess_align_of;
 use crate::de::{Context, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 
-/// Deserialize a BSON byte vec into any deserializable type.
+/// Deserialize a BSON byte slice into any deserializable type.
 ///
 /// ```rust
 /// use knocknoc::{bson, Deserialize};
@@ -38,7 +40,11 @@ pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -
 }
 
 struct BsonDe<'de> {
+    /// Remaining buffer slice
     buffer: &'de [u8],
+    /// Buffer alignment (useful for handling errors)
+    align: usize,
+    /// Byte index, used to skip
     index: usize,
     ty: u8,
     key: &'de str,
@@ -64,14 +70,22 @@ macro_rules! read_byte_impl {
 /// and interpreting as little endian bytes many primitive types
 impl<'de> BsonDe<'de> {
     fn new(buffer: &'de [u8]) -> Result<Self> {
-        // The buffer must be aligned with 4
-        if buffer.as_ptr().align_offset(4) != 0 {
-            Err(Error)?
+        let align = guess_align_of(buffer.as_ptr());
+
+        #[cfg(not(feature = "higher-rank-alignment"))]
+        {
+            // The buffer must be aligned higher ranks allows for
+            // higher alignments, but it should be at least 8
+            // ! TODO: Support for higher alignment requirements
+            if align < Buffer::ALIGNMENT {
+                Err(Error)?
+            }
         }
 
         let de = Self {
             buffer,
             index: 0,
+            align,
             ty: 0,
             key: "",
         };
@@ -84,6 +98,19 @@ impl<'de> BsonDe<'de> {
         self.read_u32()? as usize;
 
         self.next()?;
+
+        // Read custom alignment requirement root
+        #[cfg(not(feature = "higher-rank-alignment"))]
+        if self.key == "align" {
+            let mut align: Option<u8> = None;
+            self.visit(u8::begin(&mut align), c)?;
+            // Alignment not met
+            if align.unwrap() as usize > self.align {
+                Err(Error)?
+            }
+            self.next()?; // Next filed (blank name) will be the actual data
+        }
+
         self.visit(v, c)?;
 
         // Document done and all input was consumed
@@ -94,6 +121,7 @@ impl<'de> BsonDe<'de> {
         }
     }
 
+    #[inline(always)]
     fn next(&mut self) -> Result<()> {
         self.ty = self.read_u8()?;
         self.key = self.read_cstring()?;
@@ -140,6 +168,7 @@ impl<'de> BsonDe<'de> {
                     || align == 0
                     || b.as_ptr().align_offset(align as usize) != 0
                 {
+                    // TODO: align off by ...
                     Err(Error)?
                 }
 
@@ -184,7 +213,7 @@ impl<'de> BsonDe<'de> {
                 let mut stack = Stack { e, de: self };
                 v.seq(&mut stack, c)?;
                 self.read_u8()?; // '\0' (end document)
-                self.index = e + 1; // No matter what skip the entire document
+                self.skip(e + 1) // No matter what skip the entire document
             }
             0x03 => {
                 let size = self.read_i32()?;
@@ -192,11 +221,20 @@ impl<'de> BsonDe<'de> {
                 let mut stack = Stack { e, de: self };
                 v.map(&mut stack, c)?;
                 self.read_u8()?; // '\0' (end document)
-                self.index = e + 1; // No matter what skip the entire document
+                self.skip(e + 1) // No matter what skip the entire document
             }
             _ => Err(Error)?, // Unknown type
         }
         Ok(())
+    }
+
+    #[inline(always)]
+    fn skip(&mut self, i: usize) {
+        if self.index < i {
+            // Advance buffer when necessary
+            self.buffer = &self.buffer[(i - self.index)..];
+            self.index = i;
+        }
     }
 
     read_byte_impl!(u8, i8, u32, i32, u64, i64, f32, f64);

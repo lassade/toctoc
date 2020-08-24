@@ -3,9 +3,7 @@ use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::ptr::null_mut;
 use std::slice::IterMut;
 
-const ALIGNMENT: usize = 4;
-
-/// Like a byte `Vec` but with underling buffer aligned with `4`
+/// Like a byte `Vec` but with underling buffer always aligned with `Self::ALIGNMENT`
 pub struct Buffer {
     ptr: *mut u8,
     cap: usize,
@@ -13,6 +11,8 @@ pub struct Buffer {
 }
 
 impl Buffer {
+    pub const ALIGNMENT: usize = 4;
+
     pub fn new() -> Self {
         Buffer {
             ptr: null_mut(),
@@ -40,7 +40,7 @@ impl Buffer {
     pub fn reserve(&mut self, len: usize) {
         if len > self.cap {
             let cap = ((len >> 1) << 2).max(4); // new capacity
-            let layout = Layout::from_size_align(cap, ALIGNMENT).unwrap();
+            let layout = Layout::from_size_align(cap, Self::ALIGNMENT).unwrap();
 
             let ptr = unsafe {
                 if self.cap == 0 {
@@ -48,7 +48,7 @@ impl Buffer {
                 } else {
                     realloc(
                         self.ptr,
-                        Layout::from_size_align_unchecked(self.len, ALIGNMENT),
+                        Layout::from_size_align_unchecked(self.len, Self::ALIGNMENT),
                         cap,
                     )
                 }
@@ -127,7 +127,7 @@ impl Drop for Buffer {
             if self.ptr != null_mut() {
                 dealloc(
                     self.ptr,
-                    Layout::from_size_align_unchecked(self.cap, ALIGNMENT),
+                    Layout::from_size_align_unchecked(self.cap, Self::ALIGNMENT),
                 )
             }
         }

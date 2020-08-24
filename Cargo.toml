@@ -41,10 +41,22 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
 default = ["simd"]
-simd = ["simd-json"] # SIMD deserialization
-any-context = [] # Context will be std::any::Any
-deeply-nested = [] # Manipulates the stack to (de)serialize deeply nested structs
-error = ["anyhow"] # Useful errors when debuging
+
+# SIMD deserialization (default)
+simd = ["simd-json"]
+
+# Use ser and de `Context` as std::any::Any
+any-context = []
+
+# Manipulates the stack to (de)serialize deeply nested structs
+deeply-nested = []
+
+# Better errors when debuging
+error = ["anyhow"]
+
+# Allow custom alignment requirements by also serializing them as
+# the first field in the root document. Only applicable when using bson
+higher-rank-alignment = []
 
 [[bench]]
 name = "bench"

@@ -6,14 +6,14 @@
 //! ## Serializing a primitive
 //!
 //! ```rust
-//! use knocknoc::ser::{Fragment, Serialize, Context};
+//! use knocknoc::ser::{Serialize, Visitor, Context, Done};
 //!
 //! // The data structure that we want to serialize as a primitive.
 //! struct MyBoolean(bool);
 //!
 //! impl Serialize for MyBoolean {
-//!     fn begin(&self, _c: &dyn Context) -> Fragment {
-//!         Fragment::Bool(self.0)
+//!     fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+//!         v.boolean(self.0)
 //!     }
 //! }
 //! ```
@@ -21,25 +21,18 @@
 //! ## Serializing a sequence
 //!
 //! ```rust
-//! use knocknoc::ser::{Fragment, Seq, Serialize, Context};
+//! use knocknoc::ser::{Serialize, Visitor, Context, Done};
 //!
 //! // Some custom sequence type that we want to serialize.
 //! struct MyVec<T>(Vec<T>);
 //!
 //! impl<T: Serialize> Serialize for MyVec<T> {
-//!     fn begin(&self, _c: &dyn Context) -> Fragment {
-//!         Fragment::Seq(Box::new(SliceStream { iter: self.0.iter() }))
-//!     }
-//! }
-//!
-//! struct SliceStream<'a, T: 'a> {
-//!     iter: std::slice::Iter<'a, T>,
-//! }
-//!
-//! impl<'a, T: Serialize> Seq for SliceStream<'a, T> {
-//!     fn next(&mut self) -> Option<&dyn Serialize> {
-//!         let element = self.iter.next()?;
-//!         Some(element)
+//!     fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+//!        let mut seq = v.seq();
+//!        for e in &self.0 {
+//!            seq = seq.element(e, context);
+//!        }
+//!        seq.done()
 //!     }
 //! }
 //! ```
@@ -50,8 +43,7 @@
 //! `#[derive(Serialize)]`.
 //!
 //! ```rust
-//! use knocknoc::ser::{Fragment, Map, Serialize, Context};
-//! use std::borrow::Cow;
+//! use knocknoc::ser::{Serialize, Visitor, Context, Done};
 //!
 //! // The struct that we would like to serialize.
 //! struct Demo {
@@ -60,28 +52,11 @@
 //! }
 //!
 //! impl Serialize for Demo {
-//!     fn begin(&self, _c: &dyn Context) -> Fragment {
-//!         Fragment::Map(Box::new(DemoStream {
-//!             data: self,
-//!             state: 0,
-//!         }))
-//!     }
-//! }
-//!
-//! struct DemoStream<'a> {
-//!     data: &'a Demo,
-//!     state: usize,
-//! }
-//!
-//! impl<'a> Map for DemoStream<'a> {
-//!     fn next(&mut self) -> Option<(Cow<str>, &dyn Serialize)> {
-//!         let state = self.state;
-//!         self.state += 1;
-//!         match state {
-//!             0 => Some((Cow::Borrowed("code"), &self.data.code)),
-//!             1 => Some((Cow::Borrowed("message"), &self.data.message)),
-//!             _ => None,
-//!         }
+//!     fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+//!         v.map()
+//!             .field("code", &self.code, context)
+//!             .field("message", &self.message, context)
+//!             .done()
 //!     }
 //! }
 //! ```

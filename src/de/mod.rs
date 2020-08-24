@@ -68,44 +68,15 @@
 //! struct MyVec<T>(Vec<T>);
 //!
 //! impl<'de, T: Deserialize<'de>> Visitor<'de> for Place<MyVec<T>> {
-//!     fn seq<'a>(&'a mut self) -> Result<Box<dyn Seq<'de> + 'a>>
-//!     where
-//!         'de: 'a
-//!     {
-//!         Ok(Box::new(VecBuilder {
-//!             out: &mut self.out,
-//!             vec: Vec::new(),
-//!             element: None,
-//!         }))
-//!     }
-//! }
-//!
-//! struct VecBuilder<'a, T: 'a> {
-//!     // At the end, output will be written here.
-//!     out: &'a mut Option<MyVec<T>>,
-//!     // Previous elements are accumulated here.
-//!     vec: Vec<T>,
-//!     // Next element will be placed here.
-//!     element: Option<T>,
-//! }
-//!
-//! impl<'a, 'de: 'a, T: Deserialize<'de>> Seq<'de> for VecBuilder<'a, T> {
-//!     fn element(&mut self) -> Result<&mut dyn Visitor<'de>> {
-//!         // Free up the place by transfering the most recent element
-//!         // into self.vec.
-//!         self.vec.extend(self.element.take());
-//!         // Hand out a place to write the next element.
-//!         Ok(Deserialize::begin(&mut self.element))
-//!     }
-//!
-//!     fn finish(&mut self, _: &mut dyn Context) -> Result<()> {
-//!         // Transfer the last element.
-//!         self.vec.extend(self.element.take());
-//!         // Move the output object into self.out.
-//!         let vec = mem::replace(&mut self.vec, Vec::new());
-//!         *self.out = Some(MyVec(vec));
-//!         Ok(())
-//!     }
+//!         fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
+//!             let mut vec = vec![];
+//!             let mut element = None;
+//!             while s.visit(Deserialize::begin(&mut element), c)? {
+//!                 element.take().map(|e| vec.push(e));
+//!             }
+//!             self.out = Some(MyVec(vec));
+//!             Ok(())
+//!         }
 //! }
 //!
 //! impl<'de, T: Deserialize<'de>> Deserialize<'de> for MyVec<T> {
@@ -122,7 +93,7 @@
 //! `#[derive(Deserialize)]`.
 //!
 //! ```rust
-//! use knocknoc::{make_place, Result};
+//! use knocknoc::{make_place, Result, Error};
 //! use knocknoc::de::{Deserialize, Map, Visitor, Context};
 //!
 //! make_place!(Place);
@@ -134,48 +105,19 @@
 //! }
 //!
 //! impl<'de> Visitor<'de> for Place<Demo> {
-//!     fn map<'a>(&'a mut self) -> Result<Box<dyn Map<'de> + 'a>>
-//!     where
-//!         'de: 'a
-//!     {
-//!         // Like for sequences, we produce a builder that can hand out places
-//!         // to write one struct field at a time.
-//!         Ok(Box::new(DemoBuilder {
-//!             code: None,
-//!             message: None,
-//!             out: &mut self.out,
-//!         }))
-//!     }
-//! }
-//!
-//! struct DemoBuilder<'a> {
-//!     code: Option<u32>,
-//!     message: Option<String>,
-//!     out: &'a mut Option<Demo>,
-//! }
-//!
-//! impl<'a, 'de: 'a> Map<'de> for DemoBuilder<'a> {
-//!     fn key(&mut self, k: &str) -> Result<&mut dyn Visitor<'de>> {
-//!         // Figure out which field is being deserialized and return a place
-//!         // to write it.
-//!         //
-//!         // The code here ignores unrecognized fields but an implementation
-//!         // would be free to return an error instead. Similarly an
-//!         // implementation may want to check for duplicate fields by
-//!         // returning an error if the current field already has a value.
-//!         match k {
-//!             "code" => Ok(Deserialize::begin(&mut self.code)),
-//!             "message" => Ok(Deserialize::begin(&mut self.message)),
-//!             _ => Ok(Visitor::ignore()),
+//!     fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
+//!         let mut code = Deserialize::default();
+//!         let mut message = Deserialize::default();
+//!         while let Some(k) = m.next()? {
+//!             match k {
+//!                 "code" => m.visit(Deserialize::begin(&mut code), c)?,
+//!                 "message" => m.visit(Deserialize::begin(&mut message), c)?,
+//!                 _ => m.visit(Visitor::ignore(), c)?,
+//!             }
 //!         }
-//!     }
-//!
-//!     fn finish(&mut self, _: &mut dyn Context) -> Result<()> {
-//!         // Make sure we have every field and then write the output object
-//!         // into self.out.
-//!         let code = self.code.take().ok_or(knocknoc::Error)?;
-//!         let message = self.message.take().ok_or(knocknoc::Error)?;
-//!         *self.out = Some(Demo { code, message });
+//!         let code = code.ok_or(Error)?;
+//!         let message = message.ok_or(Error)?;
+//!         self.out = Some(Demo { code, message });
 //!         Ok(())
 //!     }
 //! }

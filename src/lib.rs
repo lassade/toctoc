@@ -181,9 +181,6 @@ pub use crate::ser::Serialize;
 
 make_place!(Place);
 
-#[allow(non_camel_case_types)]
-struct private;
-
 #[cfg(target_endian = "big")]
 #[allow(unused)]
 pub fn check_endianness() {

@@ -1,6 +1,7 @@
 use knocknoc::json::{self, Value};
 
 #[test]
+#[cfg(feature = "deeply-nested")]
 fn test_round_trip_deeply_nested() {
     let mut j = String::new();
     for _ in 0..100_000 {

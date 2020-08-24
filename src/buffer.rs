@@ -1,7 +1,9 @@
 use paste::paste;
-use std::alloc::{alloc, realloc, Layout};
+use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::ptr::null_mut;
 use std::slice::IterMut;
+
+const ALIGNMENT: usize = 4;
 
 /// Like a byte `Vec` but with underling buffer aligned with `4`
 pub struct Buffer {
@@ -38,7 +40,7 @@ impl Buffer {
     pub fn reserve(&mut self, len: usize) {
         if len > self.cap {
             let cap = ((len >> 1) << 2).max(4); // new capacity
-            let layout = Layout::from_size_align(cap, 4).unwrap();
+            let layout = Layout::from_size_align(cap, ALIGNMENT).unwrap();
 
             let ptr = unsafe {
                 if self.cap == 0 {
@@ -46,7 +48,7 @@ impl Buffer {
                 } else {
                     realloc(
                         self.ptr,
-                        Layout::from_size_align_unchecked(self.len, 4),
+                        Layout::from_size_align_unchecked(self.len, ALIGNMENT),
                         cap,
                     )
                 }
@@ -62,7 +64,7 @@ impl Buffer {
         self.reserve(len);
 
         unsafe {
-            std::ptr::copy(slice.as_ptr(), self.ptr.add(self.len), slice.len());
+            std::ptr::copy_nonoverlapping(slice.as_ptr(), self.ptr.add(self.len), slice.len());
         }
 
         self.len = len;
@@ -93,7 +95,11 @@ impl Buffer {
     }
 
     pub fn to_vec(self) -> Vec<u8> {
-        unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) }
+        unsafe {
+            let vec = Vec::from_raw_parts(self.ptr, self.len, self.cap);
+            std::mem::forget(self); // Avoid double free
+            vec
+        }
     }
 
     pub fn iter_mut<'a>(&'a mut self) -> IterMut<'a, u8> {
@@ -112,6 +118,19 @@ impl Buffer {
     #[inline]
     pub unsafe fn get_mut_unchecked(&mut self, index: usize) -> &mut u8 {
         &mut *self.ptr.add(index)
+    }
+}
+
+impl Drop for Buffer {
+    fn drop(&mut self) {
+        unsafe {
+            if self.ptr != null_mut() {
+                dealloc(
+                    self.ptr,
+                    Layout::from_size_align_unchecked(self.cap, ALIGNMENT),
+                )
+            }
+        }
     }
 }
 

@@ -12,6 +12,13 @@ mod help {
     pub type Usize = usize;
 }
 
+pub enum Hint<'a> {
+    Null,
+    Number(u64),
+    Str(&'a str),
+    Bytes(&'a [u8]),
+}
+
 pub type Asset = (std::sync::Arc<u32>, std::any::TypeId, u32);
 pub type Entity = (u32, u32);
 

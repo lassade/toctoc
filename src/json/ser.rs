@@ -1,6 +1,4 @@
-use std::borrow::Cow;
-
-use crate::ser::{Context, Fragment, Map, Seq, Serialize};
+use crate::ser::{Context, Serialize, Serializer, SerializerMap, SerializerSeq};
 
 /// Serialize any serializable type into a JSON string.
 ///
@@ -24,172 +22,171 @@ use crate::ser::{Context, Fragment, Map, Seq, Serialize};
 /// }
 /// ```
 pub fn to_string<T: ?Sized + Serialize>(value: &T, context: &dyn Context) -> String {
-    to_string_impl(&value, context)
+    let mut json = JsonSer { out: vec![] };
+    value.begin((&mut json).into(), context);
+    json.done()
 }
 
-struct Serializer<'a> {
-    stack: Vec<Layer<'a>>,
+struct JsonSer {
+    out: Vec<u8>,
 }
 
-enum Layer<'a> {
-    Seq(Box<dyn Seq + 'a>),
-    Map(Box<dyn Map + 'a>),
-}
+impl JsonSer {
+    #[inline]
+    fn push(&mut self, c: u8) {
+        self.out.push(c)
+    }
 
-impl<'a> Drop for Serializer<'a> {
-    fn drop(&mut self) {
-        // Drop layers in reverse order.
-        while !self.stack.is_empty() {
-            self.stack.pop();
+    fn push_str(&mut self, s: &str) {
+        self.out.extend_from_slice(s.as_bytes())
+    }
+
+    // Clippy false positive: https://github.com/rust-lang/rust-clippy/issues/5169
+    #[allow(clippy::zero_prefixed_literal)]
+    fn push_str_escaped(&mut self, value: &str) {
+        self.out.push(b'"');
+
+        let bytes = value.as_bytes();
+        let mut start = 0;
+
+        for (i, &byte) in bytes.iter().enumerate() {
+            let escape = ESCAPE[byte as usize];
+            if escape == 0 {
+                continue;
+            }
+
+            if start < i {
+                self.push_str(&value[start..i]);
+            }
+
+            match escape {
+                self::BB => self.push_str("\\b"),
+                self::TT => self.push_str("\\t"),
+                self::NN => self.push_str("\\n"),
+                self::FF => self.push_str("\\f"),
+                self::RR => self.push_str("\\r"),
+                self::QU => self.push_str("\\\""),
+                self::BS => self.push_str("\\\\"),
+                self::U => {
+                    static HEX_DIGITS: [u8; 16] = *b"0123456789abcdef";
+                    self.push_str("\\u00");
+                    self.push(HEX_DIGITS[(byte >> 4) as usize]);
+                    self.push(HEX_DIGITS[(byte & 0xF) as usize]);
+                }
+                _ => unreachable!(),
+            }
+
+            start = i + 1;
         }
+
+        if start != bytes.len() {
+            self.push_str(&value[start..]);
+        }
+
+        self.push(b'"');
+    }
+
+    /// **NOTE** Must guarantee that there is at least one element in `out`
+    #[inline]
+    unsafe fn undo_comma(&mut self) {
+        let i = self.out.len() - 1;
+        if *self.out.get_unchecked(i) == b',' {
+            self.out.set_len(i)
+        }
+    }
+
+    fn done(self) -> String {
+        unsafe { String::from_utf8_unchecked(self.out) }
     }
 }
 
-fn to_string_impl(value: &dyn Serialize, context: &dyn Context) -> String {
-    let mut out = String::new();
-    let mut serializer = Serializer { stack: Vec::new() };
-    let mut fragment = value.begin(context);
+impl Serializer for JsonSer {
+    fn null(&mut self) {
+        self.push_str("null");
+    }
 
-    loop {
-        match fragment {
-            Fragment::Null => out.push_str("null"),
-            Fragment::Bool(b) => out.push_str(if b { "true" } else { "false" }),
-            Fragment::Str(s) => escape_str(&s, &mut out),
-            Fragment::U64(n) => out.push_str(itoa::Buffer::new().format(n)),
-            Fragment::I64(n) => out.push_str(itoa::Buffer::new().format(n)),
-            Fragment::F64(n) => {
-                if n.is_finite() {
-                    out.push_str(ryu::Buffer::new().format_finite(n))
-                } else {
-                    out.push_str("null")
-                }
-            }
-            Fragment::Seq(mut seq) => {
-                out.push('[');
-                // invariant: `seq` must outlive `first`
-                match careful!(seq.next() as Option<&dyn Serialize>) {
-                    Some(first) => {
-                        serializer.stack.push(Layer::Seq(seq));
-                        fragment = first.begin(context);
-                        continue;
-                    }
-                    None => out.push(']'),
-                }
-            }
-            Fragment::Map(mut map) => {
-                out.push('{');
-                // invariant: `map` must outlive `first`
-                match careful!(map.next() as Option<(Cow<str>, &dyn Serialize)>) {
-                    Some((key, first)) => {
-                        escape_str(&key, &mut out);
-                        out.push(':');
-                        serializer.stack.push(Layer::Map(map));
-                        fragment = first.begin(context);
-                        continue;
-                    }
-                    None => out.push('}'),
-                }
-            }
-            // * MOD: Format new fragment types
-            Fragment::U8(n) => out.push_str(itoa::Buffer::new().format(n)),
-            Fragment::I8(n) => out.push_str(itoa::Buffer::new().format(n)),
-            Fragment::U32(n) => out.push_str(itoa::Buffer::new().format(n)),
-            Fragment::I32(n) => out.push_str(itoa::Buffer::new().format(n)),
-            Fragment::F32(n) => {
-                if n.is_finite() {
-                    out.push_str(ryu::Buffer::new().format_finite(n))
-                } else {
-                    out.push_str("null")
-                }
-            }
-            Fragment::Bin { bytes, align } => {
-                let _ = align;
-                out.push_str("\"#");
-                // Extra padding bytes for maneuvering, to ensure alignment
-                for _ in 0..(align / 2) {
-                    out.push_str("--");
-                }
-                out.push_str(&bintext::hex::encode(bytes.as_ref()));
-                out.push('"');
-            } //_ => unimplemented!(),
-        }
+    fn boolean(&mut self, b: bool) {
+        self.push_str(if b { "true" } else { "false" });
+    }
 
-        loop {
-            match serializer.stack.last_mut() {
-                Some(Layer::Seq(seq)) => {
-                    // invariant: `seq` must outlive `next`
-                    match careful!(seq.next() as Option<&dyn Serialize>) {
-                        Some(next) => {
-                            out.push(',');
-                            fragment = next.begin(context);
-                            break;
-                        }
-                        None => out.push(']'),
-                    }
-                }
-                Some(Layer::Map(map)) => {
-                    // invariant: `map` must outlive `next`
-                    match careful!(map.next() as Option<(Cow<str>, &dyn Serialize)>) {
-                        Some((key, next)) => {
-                            out.push(',');
-                            escape_str(&key, &mut out);
-                            out.push(':');
-                            fragment = next.begin(context);
-                            break;
-                        }
-                        None => out.push('}'),
-                    }
-                }
-                None => return out,
-            }
-            serializer.stack.pop();
+    fn string(&mut self, s: &str) {
+        self.push_str_escaped(&s);
+    }
+
+    fn long(&mut self, n: i64) {
+        self.push_str(itoa::Buffer::new().format(n));
+    }
+
+    fn ulong(&mut self, n: u64) {
+        self.push_str(itoa::Buffer::new().format(n));
+    }
+
+    fn double(&mut self, n: f64) {
+        if n.is_finite() {
+            self.push_str(ryu::Buffer::new().format_finite(n))
+        } else {
+            self.push_str("null")
         }
+    }
+
+    fn seq(&mut self) -> &mut dyn SerializerSeq {
+        self.push(b'[');
+        self
+    }
+
+    fn map(&mut self) -> &mut dyn SerializerMap {
+        self.push(b'{');
+        self
+    }
+
+    fn single(&mut self, n: f32) {
+        if n.is_finite() {
+            self.push_str(ryu::Buffer::new().format_finite(n))
+        } else {
+            self.push_str("null")
+        }
+    }
+
+    fn bytes(&mut self, b: &[u8], a: usize) {
+        self.push_str("\"#");
+        // Extra padding bytes for maneuvering, to ensure alignment
+        for _ in 0..(a / 2) {
+            self.push_str("--");
+        }
+        self.push_str(&bintext::hex::encode(b.as_ref()));
+        self.push(b'"');
     }
 }
 
-// Clippy false positive: https://github.com/rust-lang/rust-clippy/issues/5169
-#[allow(clippy::zero_prefixed_literal)]
-fn escape_str(value: &str, out: &mut String) {
-    out.push('"');
-
-    let bytes = value.as_bytes();
-    let mut start = 0;
-
-    for (i, &byte) in bytes.iter().enumerate() {
-        let escape = ESCAPE[byte as usize];
-        if escape == 0 {
-            continue;
-        }
-
-        if start < i {
-            out.push_str(&value[start..i]);
-        }
-
-        match escape {
-            self::BB => out.push_str("\\b"),
-            self::TT => out.push_str("\\t"),
-            self::NN => out.push_str("\\n"),
-            self::FF => out.push_str("\\f"),
-            self::RR => out.push_str("\\r"),
-            self::QU => out.push_str("\\\""),
-            self::BS => out.push_str("\\\\"),
-            self::U => {
-                static HEX_DIGITS: [u8; 16] = *b"0123456789abcdef";
-                out.push_str("\\u00");
-                out.push(HEX_DIGITS[(byte >> 4) as usize] as char);
-                out.push(HEX_DIGITS[(byte & 0xF) as usize] as char);
-            }
-            _ => unreachable!(),
-        }
-
-        start = i + 1;
+impl SerializerSeq for JsonSer {
+    fn element(&mut self, s: &dyn Serialize, c: &dyn Context) {
+        s.begin(self.into(), c);
+        self.push(b',');
     }
 
-    if start != bytes.len() {
-        out.push_str(&value[start..]);
+    fn done(&mut self) {
+        unsafe {
+            self.undo_comma();
+        }
+        self.push(b']');
+    }
+}
+
+impl SerializerMap for JsonSer {
+    fn field(&mut self, f: &str, s: &dyn Serialize, c: &dyn Context) {
+        self.push(b'\"');
+        self.push_str(f);
+        self.push_str("\":");
+        s.begin(self.into(), c);
+        self.push(b',');
     }
 
-    out.push('"');
+    fn done(&mut self) {
+        unsafe {
+            self.undo_comma();
+        }
+        self.push(b'}');
+    }
 }
 
 const BB: u8 = b'b'; // \x08

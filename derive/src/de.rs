@@ -25,10 +25,6 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
     let (impl_de_generics, _, _) = input_generics.split_for_impl();
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let dummy = Ident::new(
-        &format!("_IMPL_MINIDESERIALIZE_FOR_{}", ident),
-        Span::call_site(),
-    );
 
     let fieldname = fields.named.iter().map(|f| &f.ident).collect::<Vec<_>>();
     let fieldty = fields.named.iter().map(|f| &f.ty);
@@ -38,74 +34,55 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
         .map(attr::name_of_field)
         .collect::<Result<Vec<_>>>()?;
 
-    let wrapper_generics = bound::with_lifetime_bound(&input.generics, "'__a");
-    let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
-    let wrapper_generics = bound::with_lifetime_bound(&input_generics, "'__a");
-    let (wrapper_impl_vis_generics, _, _) = wrapper_generics.split_for_impl();
     let bound = parse_quote!(knocknoc::Deserialize);
     let bounded_where_clause = bound::where_clause_with_bound(&input.generics, bound);
 
     Ok(quote! {
-        #[allow(non_upper_case_globals)]
-        const #dummy: () = {
+        #[doc(hidden)]
+        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        const _: () = {
+            use knocknoc as __crate;
+
             #[repr(C)]
             struct __Visitor #impl_generics #where_clause {
-                __out: knocknoc::export::Option<#ident #ty_generics>,
+                __out: __crate::export::Option<#ident #ty_generics>,
             }
 
-            impl #impl_de_generics knocknoc::Deserialize<'de> for #ident #ty_generics #bounded_where_clause {
-                fn begin(__out: &mut knocknoc::export::Option<Self>) -> &mut dyn knocknoc::de::Visitor<'de> {
+            impl #impl_de_generics __crate::Deserialize<'de> for #ident #ty_generics #bounded_where_clause {
+                fn begin(__out: &mut __crate::export::Option<Self>) -> &mut dyn __crate::de::Visitor<'de> {
                     unsafe {
                         &mut *{
                             __out
-                            as *mut knocknoc::export::Option<Self>
+                            as *mut __crate::export::Option<Self>
                             as *mut __Visitor #ty_generics
                         }
                     }
                 }
             }
 
-            impl #impl_de_generics knocknoc::de::Visitor<'de> for __Visitor #ty_generics #bounded_where_clause {
-                fn map<'__map>(&'__map mut self) -> knocknoc::Result<knocknoc::export::Box<dyn knocknoc::de::Map<'de> + '__map>>
-                where
-                    'de: '__map
-                {
-                    Ok(knocknoc::export::Box::new(__State {
-                        #(
-                            #fieldname: knocknoc::Deserialize::default(),
-                        )*
-                        __out: &mut self.__out,
-                    }))
-                }
-            }
-
-            struct __State #wrapper_impl_generics #where_clause {
-                #(
-                    #fieldname: knocknoc::export::Option<#fieldty>,
-                )*
-                __out: &'__a mut knocknoc::export::Option<#ident #ty_generics>,
-            }
-
-            impl #wrapper_impl_vis_generics knocknoc::de::Map<'de> for __State #wrapper_ty_generics #bounded_where_clause {
-                fn key(&mut self, __k: &knocknoc::export::str) -> knocknoc::Result<&mut dyn knocknoc::de::Visitor<'de>> {
-                    match __k {
-                        #(
-                            #fieldstr => knocknoc::export::Ok(knocknoc::Deserialize::begin(&mut self.#fieldname)),
-                        )*
-                        _ => knocknoc::export::Ok(knocknoc::de::Visitor::ignore()),
-                    }
-                }
-
-                fn finish(&mut self, _: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
+            impl #impl_de_generics __crate::de::Visitor<'de> for __Visitor #ty_generics #bounded_where_clause {
+                fn map(&mut self, __m: &mut dyn __crate::de::Map<'de>, __c: &mut dyn __crate::de::Context) -> __crate::Result<()> {
                     #(
-                        let #fieldname = self.#fieldname.take().ok_or(knocknoc::Error)?;
+                        let mut #fieldname: __crate::export::Option<#fieldty> = __crate::Deserialize::default();
                     )*
-                    *self.__out = knocknoc::export::Some(#ident {
+
+                    while let Some(__k) = __m.next()? {
+                        match __k {
+                            #(
+                                #fieldstr => __m.visit(__crate::Deserialize::begin(&mut #fieldname), __c)?,
+                            )*
+                            _ => __m.visit(__crate::de::Visitor::ignore(), __c)?,
+                        }
+                    }
+                    #(
+                        let #fieldname = #fieldname.take().ok_or(__crate::Error)?;
+                    )*
+                    self.__out = __crate::export::Some(#ident {
                         #(
                             #fieldname,
                         )*
                     });
-                    knocknoc::export::Ok(())
+                    Ok(())
                 }
             }
         };
@@ -167,7 +144,7 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenS
                 fn string(&mut self, s: &'de knocknoc::export::str, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                     let value = match s {
                         #( #names => #ident::#var_idents, )*
-                        _ => { return knocknoc::export::Err(knocknoc::Error) },
+                        _ => { knocknoc::export::Err(knocknoc::Error)? },
                     };
                     self.__out = knocknoc::export::Some(value);
                     knocknoc::export::Ok(())

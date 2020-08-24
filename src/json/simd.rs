@@ -24,80 +24,38 @@ use simd_json::{Node, StaticNode};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_str<'de, T: Deserialize<'de>>(j: &'de mut str, ctx: &mut dyn Context) -> Result<T> {
+pub fn from_str<'de, T: Deserialize<'de>>(json: &'de mut str, ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    let bytes = unsafe { j.as_bytes_mut() };
-    from_str_impl(bytes, T::begin(&mut out), ctx)?;
-    out.ok_or(Error)
+    let mut de = JsonDe::new(json)?;
+    de.visit(T::begin(&mut out), ctx)?;
+    out.ok_or(Error.into())
 }
 
-enum Layer<'a> {
-    Seq(Box<dyn Seq<'a> + 'a>),
-    Map(Box<dyn Map<'a> + 'a>),
+struct JsonDe<'de> {
+    index: usize,
+    tape: Vec<Node<'de>>,
 }
 
-struct Deserializer<'a, 'b> {
-    i: usize,
-    tape: Vec<Node<'a>>,
-    stack: Vec<(&'b mut dyn Visitor<'a>, Layer<'b>, usize)>,
-}
-
-impl<'a, 'b> Iterator for Deserializer<'a, 'b> {
-    type Item = Node<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let v = self.tape.get(self.i).cloned();
-        self.i += 1;
-        v
+impl<'de> JsonDe<'de> {
+    fn new(json: &'de mut str) -> Result<Self> {
+        Ok(Self {
+            index: 1, // First node is always of type `Static(Null)`,
+            tape: simd_json::to_tape(unsafe { json.as_bytes_mut() }).map_err(|_| Error)?,
+        })
     }
-}
 
-impl<'a, 'b> Drop for Deserializer<'a, 'b> {
-    fn drop(&mut self) {
-        // Drop layers in reverse order.
-        while !self.stack.is_empty() {
-            self.stack.pop();
-        }
-    }
-}
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+        use Node::*;
+        use StaticNode::*;
 
-fn from_str_impl<'a>(
-    j: &'a mut [u8],
-    mut visitor: &mut dyn Visitor<'a>,
-    context: &mut dyn Context,
-) -> Result<()> {
-    use Node::*;
-    use StaticNode::*;
-
-    let mut de = Deserializer {
-        i: 1, // First node is always of type `Static(Null)`
-        tape: simd_json::to_tape(j).map_err(|_| Error)?,
-        stack: Vec::new(),
-    };
-
-    'outer: loop {
-        let tuple = match de.next() {
-            Some(Static(Null)) => {
-                visitor.null(context)?;
-                None
-            }
-            Some(Static(Bool(b))) => {
-                visitor.boolean(b)?;
-                None
-            }
-            Some(Static(I64(n))) => {
-                visitor.negative(n, context)?;
-                None
-            }
-            Some(Static(U64(n))) => {
-                visitor.nonnegative(n, context)?;
-                None
-            }
-            Some(Static(F64(n))) => {
-                visitor.double(n)?;
-                None
-            }
+        match Iterator::next(self) {
+            Some(Static(Null)) => v.null(c)?,
+            Some(Static(Bool(b))) => v.boolean(b)?,
+            Some(Static(I64(n))) => v.negative(n, c)?,
+            Some(Static(U64(n))) => v.nonnegative(n, c)?,
+            Some(Static(F64(n))) => v.double(n)?,
             Some(String(s)) => {
+                // ! FIXME Not good for all occasions
                 if s.starts_with('#') {
                     let mut a = 0;
                     for ch in s.as_bytes().iter().skip(1) {
@@ -110,78 +68,69 @@ fn from_str_impl<'a>(
                     // TODO: Is there a better way?
                     #[allow(mutable_transmutes)]
                     let b = unsafe {
-                        let s = std::mem::transmute(s);
+                        let s = mem::transmute(s);
                         bintext::hex::decode_aligned(s, a + 1, a.max(1)).map_err(|_| Error)?
                     };
 
-                    visitor.bytes(b, context)?;
+                    v.bytes(b, c)?;
                 } else {
-                    visitor.string(s, context)?;
+                    v.string(s, c)?;
                 }
-                None
             }
-            Some(Array(_, finish)) => {
-                let seq = careful!(visitor.seq()? as Box<dyn Seq>);
-                Some((Layer::Seq(seq), finish))
+            Some(Array(_, e)) => {
+                v.seq(&mut Stack { e, de: self }, c)?;
             }
-            Some(Object(_, finish)) => {
-                let map = careful!(visitor.map()? as Box<dyn Map>);
-                Some((Layer::Map(map), finish))
+            Some(Object(_, e)) => {
+                v.map(&mut Stack { e, de: self }, c)?;
             }
-            _ => None,
-        };
-
-        let (mut layer, mut finish) = match tuple {
-            Some(t) => t,
-            None => match de.stack.pop() {
-                Some(frame) => {
-                    visitor = frame.0;
-                    (frame.1, frame.2)
-                }
-                None => break 'outer,
-            },
-        };
-
-        // Frame ended
-        while de.i >= finish {
-            match &mut layer {
-                Layer::Seq(seq) => seq.finish(context)?,
-                Layer::Map(map) => map.finish(context)?,
-            }
-            match de.stack.pop() {
-                Some(frame) => {
-                    visitor = frame.0;
-                    layer = frame.1;
-                    finish = frame.2;
-                }
-                None => break 'outer,
-            }
+            _ => {}
         }
+        Ok(())
+    }
+}
 
-        // Push layer back
-        match layer {
-            Layer::Seq(mut seq) => {
-                let inner = careful!(seq.element()? as &mut dyn Visitor);
-                let outer = mem::replace(&mut visitor, inner);
-                de.stack.push((outer, Layer::Seq(seq), finish));
+struct Stack<'a, 'de: 'de> {
+    e: usize,
+    de: &'a mut JsonDe<'de>,
+}
+
+impl<'a, 'de: 'de> Seq<'de> for Stack<'a, 'de> {
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<bool> {
+        if self.de.index < self.e {
+            JsonDe::visit(self.de, v, c)?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+}
+
+impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
+    fn next(&mut self) -> Result<Option<&'de str>> {
+        use Node::*;
+
+        if self.de.index < self.e {
+            if let Some(String(s)) = self.de.next() {
+                Ok(Some(s))
+            } else {
+                Err(Error)?
             }
-            Layer::Map(mut map) => {
-                let inner = {
-                    let k = match de.next() {
-                        Some(String(s)) => Ok(s),
-                        _ => Err(Error),
-                    }?;
-                    careful!(map.key(k)? as &mut dyn Visitor)
-                };
-                let outer = mem::replace(&mut visitor, inner);
-                de.stack.push((outer, Layer::Map(map), finish));
-            }
+        } else {
+            Ok(None)
         }
     }
 
-    // All input was consumed
-    match de.next() {
-        Some(_) => Err(Error),
-        None => Ok(()),
+    fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+        JsonDe::visit(self.de, v, c)
+    }
+}
+
+impl<'de> Iterator for JsonDe<'de> {
+    type Item = Node<'de>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let v = self.tape.get(self.index).cloned();
+        self.index += 1;
+        v
     }
 }

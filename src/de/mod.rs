@@ -230,8 +230,6 @@ pub trait Visitor<'de> {
 }
 
 pub trait Seq<'de> {
-    //fn next(&mut self) -> Result<bool>;
-    //fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()>;
     fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<bool>;
 }
 

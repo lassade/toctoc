@@ -1,9 +1,33 @@
 Knocknoc
 =========
 
-*Knocknoc is a miniserde fork with more features guided towards gamedev*
+*Simpler serde alternative with about the same feature set, but with muth less code*
 
-![https://github.com/lassade/knocknoc_forked/blob/main/.github/workflows/rust.yml](https://github.com/lassade/knocknoc_forked/workflows/Build/badge.svg)
+[![](https://github.com/lassade/knocknoc/workflows/Build/badge.svg)](https://github.com/lassade/knocknoc/blob/main/.github/workflows/rust.yml)
+
+### Not sure about all of this ...
+
+`Serde` tries to be defacto solution for (de)serialization this also
+makes it so much complex, it's possible todo all kinds of stuff with it.
+
+But then unlucky enough it just doesn't do what you need to do. The
+same complexity that makes `serde` awesome nows discourages you for
+fine tune it to your specific needs, maybe it just fells like an overkill.
+
+The simple prospect of having to implement the `Deserialize` trait by hand
+intimidates me, then I end up resorting to fit may code into `serde`
+like using a intermediate struct to deserialize data, or having global shared states,
+it work's, the performance may be acceptable but it just doesn't fells right.
+
+Here is where `knocknoc` fits in, it implements a good chunk of serde's features
+like zero copy, it maintains about the same interface, it does a **bit less**
+out of the box, but with less code;
+
+Is not a one size fits all kind of solution is more like make
+it your own size type of one. Fork and modify as you wish.
+
+This one is gonna be a tough sell, but let me walk though all it's
+features:
 
 ### Extra: Support for u8, i8, u32, i32 and f32
 
@@ -44,6 +68,15 @@ the string into a memory aligned byte slice!
 
 For bson the start buffer must be aligned with `4` and thats it all the
 necessary padding;
+
+### Similar crates
+
+- `nanoserde` or `makepad-tinyserde`, limited to a few formats, most of the work is done
+by derives witch is great for the binary format, but also implement a custom `Deserialize` by hand
+is a no go (for complex types) and error prone;
+
+- `miniserde` The stack free feature makes the implemention much more hard that it needs to be,
+`knocknoc` achives the same result by dynamically increasing the stack, whenever needed;
 
 Miniserde (original)
 =========

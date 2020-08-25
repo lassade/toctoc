@@ -55,7 +55,7 @@ deeply-nested = []
 error = ["anyhow"]
 
 # Allow custom alignment requirements by also serializing them as
-# the first field in the root document. Only applicable when using bson
+# the first field in the root document. BSON only
 higher-rank-alignment = []
 
 [[bench]]

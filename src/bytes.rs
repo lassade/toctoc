@@ -25,6 +25,8 @@ impl<'a, 'de: 'a, T: Binary<'a>> de::Deserialize<'de> for Bytes<T> {
                 self.out = Some(Bytes::new(T1::from_bytes(b)?));
                 Ok(())
             }
+
+            // ? NOTE: Maybe fallback to `map` and `seq` if the user so wishes to use them
         }
         Place::new(out)
     }

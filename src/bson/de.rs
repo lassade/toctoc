@@ -3,7 +3,6 @@ use std::io::Read;
 use std::mem::MaybeUninit;
 use std::str;
 
-use crate::buffer::Buffer;
 use crate::bytes::guess_align_of;
 use crate::de::{Context, Deserialize, Map, Seq, Visitor};
 use crate::error::{Error, Result};
@@ -34,7 +33,7 @@ use crate::error::{Error, Result};
 /// ```
 pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    let bson = BsonDe::new(b)?;
+    let bson = BsonDe::new(b);
     bson.deserialize(T::begin(&mut out), ctx)?;
     out.ok_or(Error.into())
 }
@@ -69,28 +68,14 @@ macro_rules! read_byte_impl {
 /// Provides various functions to read bytes from the inner buffer
 /// and interpreting as little endian bytes many primitive types
 impl<'de> BsonDe<'de> {
-    fn new(buffer: &'de [u8]) -> Result<Self> {
-        let align = guess_align_of(buffer.as_ptr());
-
-        #[cfg(not(feature = "higher-rank-alignment"))]
-        {
-            // The buffer must be aligned higher ranks allows for
-            // higher alignments, but it should be at least 8
-            // ! TODO: Support for higher alignment requirements
-            if align < Buffer::ALIGNMENT {
-                Err(Error)?
-            }
-        }
-
-        let de = Self {
+    fn new(buffer: &'de [u8]) -> Self {
+        Self {
             buffer,
             index: 0,
-            align,
+            align: guess_align_of(buffer.as_ptr()),
             ty: 0,
             key: "",
-        };
-
-        Ok(de)
+        }
     }
 
     fn deserialize(mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
@@ -100,7 +85,6 @@ impl<'de> BsonDe<'de> {
         self.next()?;
 
         // Read custom alignment requirement root
-        #[cfg(not(feature = "higher-rank-alignment"))]
         if self.key == "align" {
             let mut align: Option<u8> = None;
             self.visit(u8::begin(&mut align), c)?;

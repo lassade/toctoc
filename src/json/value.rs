@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::bytes::guess_align_of;
 use crate::de::{self, Deserialize, Map, Seq, Visitor};
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::json::{Array, Number, Object};
 use crate::ser::{self, Serialize};
 use crate::Place;
@@ -170,24 +170,6 @@ impl<'de> PartialEq<Value<'de>> for Value<'de> {
             (Value::Object(left), Value::Object(right)) => left == right,
             _ => false,
         }
-    }
-}
-
-impl<'de> Value<'de> {
-    /// Converts a hex string into binary data
-    pub fn from_hex(&mut self) -> Result<()> {
-        match self {
-            Value::String(ref s) => {
-                *self = Value::Binary {
-                    bytes: Cow::Owned(bintext::hex::decode_noerr(s).map_err(|_| Error)?),
-                    align: 1, // Lowest possible alignment rank
-                }
-            }
-            _ => {
-                Err(Error)?;
-            }
-        }
-        Ok(())
     }
 }
 

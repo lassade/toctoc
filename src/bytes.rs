@@ -1,4 +1,5 @@
-use crate::{de, ser, Error, Place, Result};
+use crate::error::Error1;
+use crate::{de, ser, Place, Result};
 use std::mem::{align_of, size_of};
 
 /// Wrapper around slices or vec to be (de)serialize as bytes
@@ -70,8 +71,15 @@ impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Self> {
-        if bytes.as_ptr().align_offset(align_of::<T>()) != 0 {
-            Err(Error)?
+        // Check if data is aligned
+        let align = align_of::<T>();
+        let offset = bytes.as_ptr().align_offset(align) as u8;
+
+        if offset != 0 {
+            Err(Error1::NotAligned {
+                align: align as u8,
+                offset,
+            })?
         }
 
         unsafe {

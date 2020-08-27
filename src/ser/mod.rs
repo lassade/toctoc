@@ -219,24 +219,20 @@ pub trait Serializer {
 
     fn string(&mut self, s: &str);
 
-    #[inline]
     fn sbyte(&mut self, n: i8) {
         self.int(n as i32)
     }
 
-    #[inline]
     fn int(&mut self, n: i32) {
         self.long(n as i64)
     }
 
     fn long(&mut self, n: i64);
 
-    #[inline]
     fn byte(&mut self, n: u8) {
         self.uint(n as u32)
     }
 
-    #[inline]
     fn uint(&mut self, n: u32) {
         self.ulong(n as u64)
     }

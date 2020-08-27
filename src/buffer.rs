@@ -1,21 +1,27 @@
+//! Memory aligned buffer to help with binary serialization
+
 use paste::paste;
 use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::ptr::null_mut;
 use std::slice::IterMut;
 
-/// Like a byte `Vec` but with underling buffer always aligned with `Self::ALIGNMENT`
+/// Like a byte `Vec` but with underling buffer always aligned with
+/// the maximum alignment requirement given by `extend_from_slice_aligned`
 pub struct Buffer {
     ptr: *mut u8,
+    ptr_align: usize,
     cap: usize,
     len: usize,
 }
 
 impl Buffer {
+    /// Buffer start alignment
     pub const ALIGNMENT: usize = 4;
 
     pub fn new() -> Self {
         Buffer {
             ptr: null_mut(),
+            ptr_align: Self::ALIGNMENT,
             cap: 0,
             len: 0,
         }
@@ -39,8 +45,8 @@ impl Buffer {
 
     pub fn reserve(&mut self, len: usize) {
         if len > self.cap {
-            let cap = ((len >> 1) << 2).max(4); // new capacity
-            let layout = Layout::from_size_align(cap, Self::ALIGNMENT).unwrap();
+            let cap = (len << 1).max(4); // new capacity
+            let layout = Layout::from_size_align(cap, self.ptr_align).unwrap();
 
             let ptr = unsafe {
                 if self.cap == 0 {
@@ -48,7 +54,7 @@ impl Buffer {
                 } else {
                     realloc(
                         self.ptr,
-                        Layout::from_size_align_unchecked(self.len, Self::ALIGNMENT),
+                        Layout::from_size_align_unchecked(self.len, self.ptr_align),
                         cap,
                     )
                 }
@@ -88,6 +94,7 @@ impl Buffer {
     /// Returns the index on the buffer where the written `slice` starts
     pub fn extend_from_slice_aligned(&mut self, slice: &[u8], align: usize) -> usize {
         let padding = unsafe { self.ptr.add(self.len).align_offset(align) };
+        self.ptr_align = self.ptr_align.max(align); // Alloc using the maximum allocation
         self.extend_repeating(0, padding);
         let start = self.len();
         self.extend_from_slice(slice);
@@ -194,9 +201,39 @@ mod tests {
         let (b, a) = v.as_bytes();
         buf.write_u8(1);
         let i = buf.extend_from_slice_aligned(b, a);
-        assert_eq!((buf[i] as *const u8).align_offset(a), 0);
+        assert_eq!(unsafe { buf.as_ptr().add(i) }.align_offset(a), 0);
 
         let r = <&[[u32; 2]]>::from_bytes(&buf.as_slice()[i..]).unwrap();
         assert!(r.iter().eq(v.iter()));
+    }
+
+    #[test]
+    fn write_data_with_mutiple_alignments() {
+        let mut buf = Buffer::new();
+
+        // ? NOTE: odd number of bytes on purpose
+        let v = &b"\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\
+                          \xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\
+                          \xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\
+                          \xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\
+                          \xa5\xa5\xa5\xa5\xa5"[..];
+
+        let a = buf.extend_from_slice_aligned(v, 2);
+        let b = buf.extend_from_slice_aligned(v, 8);
+        let c = buf.extend_from_slice_aligned(v, 16);
+        let d = buf.extend_from_slice_aligned(v, 1);
+
+        // Check alignment and equality
+        assert_eq!(unsafe { buf.as_ptr().add(a) }.align_offset(2), 0);
+        assert!(buf.as_slice().iter().skip(a).take(v.len()).eq(v.iter()));
+
+        assert_eq!(unsafe { buf.as_ptr().add(b) }.align_offset(8), 0);
+        assert!(buf.as_slice().iter().skip(b).take(v.len()).eq(v.iter()));
+
+        assert_eq!(unsafe { buf.as_ptr().add(c) }.align_offset(16), 0);
+        assert!(buf.as_slice().iter().skip(c).take(v.len()).eq(v.iter()));
+
+        assert_eq!(unsafe { buf.as_ptr().add(d) }.align_offset(1), 0);
+        assert!(buf.as_slice().iter().skip(d).take(v.len()).eq(v.iter()));
     }
 }

@@ -1,3 +1,11 @@
+//! `Bytes` is a wrapper utility to (de)serialize types
+//! that are `ByValue` which means no references, as a sequence of aligned
+//! binary data.
+//!
+//! Most useful for `Vec`'s and slices, but you can be used with any type
+//! that also implements the `Binary` trait, which provide methods to convert
+//! from and to binary.
+
 use crate::error::Error1;
 use crate::{de, ser, Place, Result};
 use std::mem::{align_of, size_of};

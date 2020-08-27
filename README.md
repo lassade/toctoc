@@ -13,8 +13,8 @@ trait objects. It also supports contextual (de)serialization, have a similar
 but simplified api (less methods with most of the functionality).
 It's also fast and lightweight;
 
-The `derive` proved simple alternatives for quick implementations of both
-`Serialize` and `Deserialize` traits, but you probably want and shouldn't be
+The `derive` can be used for quick implementations of both
+`Serialize` and `Deserialize` traits, you probably want and shouldn't be
 afraid of implement your own versions tailoring to your needs.
 
 Is not a one size fits all kind of solution is more like make

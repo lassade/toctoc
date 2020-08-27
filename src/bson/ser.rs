@@ -168,7 +168,7 @@ impl<'a> Serializer for BsonSer<'a> {
 
             if a > self.align {
                 if cfg!(feature = "higher-rank-alignment") {
-                    // Buffer must now have a higher least have this align
+                    // Buffer must have a higher align requirement
                     self.align = a;
                     self.buffer[11] = a as u8;
                 } else {

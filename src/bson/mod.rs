@@ -9,6 +9,10 @@
 //! \x08 \x00 \x01
 //! \x00
 //! ```
+//!
+//! It may include some extra metadata fields like the `align` requirement
+//! if the `higher-rank-alignment` is enabled.
+//!
 
 mod ser;
 pub use self::ser::to_bin;

@@ -4,7 +4,7 @@ Knocknoc
 *Simpler serde alternative with about the same feature set,
 does less but is also way less intimidating to modify*
 
-[![](https://github.com/lassade/knocknoc/workflows/Build/badge.svg)](https://github.com/lassade/knocknoc/blob/main/.github/workflows/rust.yml)
+[![](https://github.com/lassade/knocknoc/workflows/Build/badge.svg)](https://github.com/lassade/knocknoc/actions?query=workflow%3ABuild)
 
 ## About
 
@@ -61,7 +61,7 @@ You can write new formats just like in `serde`.
 By default this crates ships with JSON as is the most commonly
 used textual format and have a nice SIMD implementation for it;
 
-And BSON is like json, but better suited for binary data.
+And BSON that is like json, but better suited for binary data.
 
 ### Data alignment
 
@@ -71,7 +71,7 @@ the `higher-rank-alignment` to allow for higher alignments.
 
 ### Zero Copy
 
-Like serde this lib supports zero copy load, and it also provides a simple
+Like serde this lib supports zero copy deserialization, and it also provides a simple
 encoding formats for aligned binary data on both json and bson.
 
 For json we have some thing like this `{ "binary": "#----01000000" }`, `#`
@@ -79,8 +79,8 @@ tells the parser this is binary data, the amount of `-` tells the alignment
 requirement for this bytes; With this format `bintext` is able to decode
 the string into a memory aligned byte slice!
 
-For bson the start buffer must be aligned with `4` and thats it all the
-necessary padding;
+For bson the start buffer must be aligned with `4`, but if you are using the
+`higher-rank-alignment` this requirement may change depending on the file metadata;
 
 ### Sateful or contextual (de)serialization
 

@@ -64,7 +64,6 @@
 mod impls;
 
 use crate::export::{Asset, Entity};
-use std::any::{Any, TypeId};
 
 /// Trait for data structures that can be serialized to a JSON string.
 ///
@@ -276,44 +275,8 @@ pub trait Context {
     }
 }
 
-/// Compatibility impl for `std::any::Any`
-#[cfg(not(feature = "any-context"))]
-impl dyn Context {
-    #[inline(always)]
-    pub fn is<T>(&self) -> bool
-    where
-        T: Any,
-    {
-        TypeId::of::<T>() == self.type_id()
-    }
-
-    #[inline(always)]
-    pub fn downcast_ref<T>(&self) -> Option<&T>
-    where
-        T: Any,
-    {
-        if self.is::<T>() {
-            unsafe { Some(&*(self as *const _ as *const T)) }
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    pub fn downcast_mut<T>(&mut self) -> Option<&mut T>
-    where
-        T: Any,
-    {
-        if self.is::<T>() {
-            unsafe { Some(&mut *(self as *mut _ as *mut T)) }
-        } else {
-            None
-        }
-    }
-}
-
 #[cfg(not(feature = "any-context"))]
 impl Context for () {}
 
 #[cfg(feature = "any-context")]
-pub type Context = Any;
+pub type Context = std::any::Any;

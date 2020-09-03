@@ -64,7 +64,7 @@ macro_rules! signed {
                             self.out = Some(n as $ty);
                             Ok(())
                         } else {
-                            Err(Error)?
+                            Err(Error::OutOfRange(stringify!($ty)))?
                         }
                     }
 
@@ -73,7 +73,7 @@ macro_rules! signed {
                             self.out = Some(n as $ty);
                             Ok(())
                         } else {
-                            Err(Error)?
+                            Err(Error::OutOfRange(stringify!($ty)))?
                         }
                     }
                 }
@@ -98,7 +98,7 @@ macro_rules! unsigned {
                             self.out = Some(n as $ty);
                             Ok(())
                         } else {
-                            Err(Error)?
+                            Err(Error::OutOfRange(stringify!($ty)))?
                         }
                     }
                 }
@@ -161,7 +161,7 @@ impl<'de> Deserialize<'de> for f32 {
                     self.out = Some(n as f32);
                     Ok(())
                 } else {
-                    Err(Error)?
+                    Err(Error::OutOfRange(stringify!("f32")))?
                 }
             }
 
@@ -309,7 +309,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
 }
 
 macro_rules! tuple {
-    ($(<$($n:ident),*>),*) => { $(
+    ($(<$($n:ident $i:literal),*>),*) => { $(
         impl<'de, $($n: Deserialize<'de>,)*> Deserialize<'de> for ($($n,)*) {
             fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
                 impl<'de, $($n: Deserialize<'de>,)*> Visitor<'de> for Place<($($n,)*)> {
@@ -319,7 +319,7 @@ macro_rules! tuple {
                         $({
                             let mut value: Option<$n> = None;
                             s.visit(Deserialize::begin(&mut value), c)?;
-                            value.ok_or(Error)?
+                            value.ok_or(Error::MissingElement($i))?
                         },)*
                         ));
                         while s.visit(Visitor::ignore(), c)? {}
@@ -335,13 +335,13 @@ macro_rules! tuple {
 }
 
 tuple!(
-    <A, B>,
-    <A, B, C>,
-    <A, B, C, D>,
-    <A, B, C, D, E>,
-    <A, B, C, D, E, F>,
-    <A, B, C, D, E, F, G>,
-    <A, B, C, D, E, F, G, H>
+    <A 0, B 1>,
+    <A 0, B 1, C 2>,
+    <A 0, B 1, C 2, D 3>,
+    <A 0, B 1, C 2, D 3, E 4>,
+    <A 0, B 1, C 2, D 3, E 4, F 5>,
+    <A 0, B 1, C 2, D 3, E 4, F 5, G 6>,
+    <A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7>
 );
 
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
@@ -379,7 +379,7 @@ where
                 let mut hashmap = HashMap::with_hasher(H::default());
                 let mut element = None;
                 while let Some(k) = m.next()? {
-                    let k = K::from_str(k).map_err(|_| Error)?;
+                    let k = K::from_str(k).map_err(|_| Error::InvalidMapKey(k.to_string()))?;
                     m.visit(Deserialize::begin(&mut element), c)?;
                     element.take().map(|e| hashmap.insert(k, e));
                 }
@@ -399,7 +399,7 @@ impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Deserialize<'de> for BTreeMap<K
                 let mut btree = BTreeMap::new();
                 let mut element = None;
                 while let Some(k) = m.next()? {
-                    let k = K::from_str(k).map_err(|_| Error)?;
+                    let k = K::from_str(k).map_err(|_| Error::InvalidMapKey(k.to_string()))?;
                     m.visit(Deserialize::begin(&mut element), c)?;
                     element.take().map(|e| btree.insert(k, e));
                 }

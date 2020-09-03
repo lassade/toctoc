@@ -5,7 +5,7 @@ use std::str;
 
 use crate::bytes::guess_align_of;
 use crate::de::{Context, Deserialize, Map, Seq, Visitor};
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorAt, Result, ResultAt};
 
 /// Deserialize a BSON byte slice into any deserializable type.
 ///
@@ -31,10 +31,15 @@ use crate::error::{Error, Result};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> Result<T> {
+pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> ResultAt<T> {
     let mut out = None;
     let bson = BsonDe::new(b);
-    bson.deserialize(T::begin(&mut out), ctx)?;
+    bson.deserialize(T::begin(&mut out), ctx)
+        .map_err(|err| ErrorAt {
+            line: 0,
+            column: bson.index,
+            err,
+        })?;
     out.ok_or(Error.into())
 }
 
@@ -57,7 +62,7 @@ macro_rules! read_byte_impl {
                     MaybeUninit::<[u8; std::mem::size_of::<$t>()]>::uninit()
                         .assume_init()
                 };
-                self.buffer.read_exact(&mut a).map_err(|_| Error)?;
+                self.buffer.read_exact(&mut a).map_err(|err| Error::Generic(Box::new(err)))?;
                 self.index += std::mem::size_of::<$t>();
                 Ok($t::from_le_bytes(a))
             }

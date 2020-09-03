@@ -6,8 +6,8 @@
 //! that also implements the `Binary` trait, which provide methods to convert
 //! from and to binary.
 
-use crate::error::Error1;
-use crate::{de, ser, Place, Result};
+use crate::error::{Error, Result};
+use crate::{de, ser, Place};
 use std::mem::{align_of, size_of};
 
 /// Wrapper around slices or vec to be (de)serialize as bytes
@@ -84,7 +84,7 @@ impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
         let offset = bytes.as_ptr().align_offset(align) as u8;
 
         if offset != 0 {
-            Err(Error1::NotAligned {
+            Err(Error::NotAligned {
                 align: align as u8,
                 offset,
             })?

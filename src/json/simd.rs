@@ -1,7 +1,7 @@
 use std::mem;
 
 use crate::de::{Context, Deserialize, Map, Seq, Visitor};
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorAt, Result, ResultAt};
 use simd_json::{Node, StaticNode};
 
 /// Deserialize a JSON string into any deserializable type.
@@ -28,7 +28,7 @@ pub fn from_str<'de, T: Deserialize<'de>>(json: &'de mut str, ctx: &mut dyn Cont
     let mut out = None;
     let mut de = JsonDe::new(json)?;
     de.visit(T::begin(&mut out), ctx)?;
-    out.ok_or(Error.into())
+    Ok(out.unwrap())
 }
 
 struct JsonDe<'de> {
@@ -40,7 +40,8 @@ impl<'de> JsonDe<'de> {
     fn new(json: &'de mut str) -> Result<Self> {
         Ok(Self {
             index: 1, // First node is always of type `Static(Null)`,
-            tape: simd_json::to_tape(unsafe { json.as_bytes_mut() }).map_err(|_| Error)?,
+            tape: simd_json::to_tape(unsafe { json.as_bytes_mut() })
+                .map_err(|err| Error::Generic(Box::new(err)))?,
         })
     }
 
@@ -69,7 +70,8 @@ impl<'de> JsonDe<'de> {
                     #[allow(mutable_transmutes)]
                     let b = unsafe {
                         let s = mem::transmute(s);
-                        bintext::hex::decode_aligned(s, a + 1, a.max(1)).map_err(|_| Error)?
+                        bintext::hex::decode_aligned(s, a + 1, a.max(1))
+                            .map_err(|err| Error::Generic(Box::new(err)))?
                     };
 
                     v.bytes(b, c)?;
@@ -113,7 +115,7 @@ impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
             if let Some(String(s)) = self.de.next() {
                 Ok(Some(s))
             } else {
-                Err(Error)?
+                Err(Error::Expecting("field name"))?
             }
         } else {
             Ok(None)

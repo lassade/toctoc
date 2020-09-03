@@ -49,6 +49,7 @@ impl<'a> BsonSer<'a> {
         // Root document
         bson.begin_doc();
 
+        // TODO: align should be a u64 ...
         if cfg!(feature = "higher-rank-alignment") {
             // Serialize the alignment requirement as the first document field
             bson.field = Some("align");

@@ -81,13 +81,10 @@ impl<'a, T: ByValue + 'a> Binary<'a> for &'a [T] {
     fn from_bytes(bytes: &'a [u8]) -> Result<Self> {
         // Check if data is aligned
         let align = align_of::<T>();
-        let offset = bytes.as_ptr().align_offset(align) as u8;
+        let offset = bytes.as_ptr().align_offset(align);
 
         if offset != 0 {
-            Err(Error::NotAligned {
-                align: align as u8,
-                offset,
-            })?
+            Err(Error::not_aligned(align, offset))?
         }
 
         unsafe {

@@ -162,9 +162,10 @@ mod careful;
 #[macro_use]
 mod place;
 
+#[macro_use]
+mod error;
 pub mod buffer;
 pub mod bytes;
-mod error;
 mod ignore;
 mod owned;
 

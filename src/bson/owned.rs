@@ -1,5 +1,5 @@
 use crate::de::{Context, Deserialize};
-use crate::error::ResultAt;
+use crate::error::Result;
 use crate::owned::OwnedRaw;
 use std::mem::transmute;
 use std::pin::Pin;
@@ -9,7 +9,7 @@ pub type Owned<T> = OwnedRaw<Vec<u8>, T>;
 pub fn from_bin_owned<'de, T: Deserialize<'de>>(
     mut data: Vec<u8>,
     ctx: &mut dyn Context,
-) -> ResultAt<Owned<T>> {
+) -> Result<Owned<T>> {
     unsafe {
         let inner: T = super::from_bin(transmute(data.as_mut_slice()), ctx)?;
         Ok(Owned {

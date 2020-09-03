@@ -75,7 +75,7 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
                         }
                     }
                     #(
-                        let #fieldname = #fieldname.take().ok_or(__crate::Error)?;
+                        let #fieldname = #fieldname.take().ok_or(__crate::Error::missing_field(#fieldstr))?;
                     )*
                     self.__out = __crate::export::Some(#ident {
                         #(
@@ -144,7 +144,7 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenS
                 fn string(&mut self, s: &'de knocknoc::export::str, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
                     let value = match s {
                         #( #names => #ident::#var_idents, )*
-                        _ => { knocknoc::export::Err(knocknoc::Error)? },
+                        __variant => { knocknoc::export::Err(knocknoc::Error::unknown_variant(__variant))? },
                     };
                     self.__out = knocknoc::export::Some(value);
                     knocknoc::export::Ok(())

@@ -173,59 +173,59 @@ pub trait Deserialize<'de>: Sized {
 pub trait Visitor<'de> {
     fn null(&mut self, c: &mut dyn Context) -> Result<()> {
         let _ = c;
-        Err(Error::NotExpected("null"))?
+        Err(Error::not_expected("null"))?
     }
 
     fn boolean(&mut self, b: bool) -> Result<()> {
         let _ = b;
-        Err(Error::NotExpected("boolean"))?
+        Err(Error::not_expected("boolean"))?
     }
 
     fn string(&mut self, s: &'de str, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = s;
-        Err(Error::NotExpected("string"))?
+        Err(Error::not_expected("string"))?
     }
 
     fn negative(&mut self, n: i64, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = n;
-        Err(Error::NotExpected("negative"))?
+        Err(Error::not_expected("negative"))?
     }
 
     fn nonnegative(&mut self, n: u64, c: &mut dyn Context) -> Result<()> {
         let _ = c;
         let _ = n;
-        Err(Error::NotExpected("nonnegative"))?
+        Err(Error::not_expected("nonnegative"))?
     }
 
     fn double(&mut self, n: f64) -> Result<()> {
         let _ = n;
-        Err(Error::NotExpected("double"))?
+        Err(Error::not_expected("double"))?
     }
 
     fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
         let _ = s;
         let _ = c;
-        Err(Error::NotExpected("seq"))?
+        Err(Error::not_expected("seq"))?
     }
 
     fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
         let _ = m;
         let _ = c;
-        Err(Error::NotExpected("map"))?
+        Err(Error::not_expected("map"))?
     }
 
     // * MOD: Extra deserialization functions
     fn single(&mut self, n: f32) -> Result<()> {
         let _ = n;
-        Err(Error::NotExpected("single"))?
+        Err(Error::not_expected("single"))?
     }
 
     fn bytes(&mut self, b: &'de [u8], c: &mut dyn Context) -> Result<()> {
         let _ = b;
         let _ = c;
-        Err(Error::NotExpected("bytes"))?
+        Err(Error::not_expected("bytes"))?
     }
 }
 
@@ -243,12 +243,12 @@ pub trait Map<'de> {
 pub trait Context {
     fn entity(&mut self, e: Hint) -> Result<Entity> {
         let _ = e;
-        Err(Error::NotExpected("entity"))?
+        Err(Error::not_expected("entity"))?
     }
 
     fn asset(&mut self, a: Hint) -> Result<Asset> {
         let _ = a;
-        Err(Error::NotExpected("asset"))?
+        Err(Error::not_expected("asset"))?
     }
 }
 

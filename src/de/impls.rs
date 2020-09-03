@@ -64,7 +64,7 @@ macro_rules! signed {
                             self.out = Some(n as $ty);
                             Ok(())
                         } else {
-                            Err(Error::OutOfRange(stringify!($ty)))?
+                            Err(Error::out_of_range(stringify!($ty)))?
                         }
                     }
 
@@ -73,7 +73,7 @@ macro_rules! signed {
                             self.out = Some(n as $ty);
                             Ok(())
                         } else {
-                            Err(Error::OutOfRange(stringify!($ty)))?
+                            Err(Error::out_of_range(stringify!($ty)))?
                         }
                     }
                 }
@@ -98,7 +98,7 @@ macro_rules! unsigned {
                             self.out = Some(n as $ty);
                             Ok(())
                         } else {
-                            Err(Error::OutOfRange(stringify!($ty)))?
+                            Err(Error::out_of_range(stringify!($ty)))?
                         }
                     }
                 }
@@ -161,7 +161,7 @@ impl<'de> Deserialize<'de> for f32 {
                     self.out = Some(n as f32);
                     Ok(())
                 } else {
-                    Err(Error::OutOfRange(stringify!("f32")))?
+                    Err(Error::out_of_range("f32"))?
                 }
             }
 
@@ -319,7 +319,7 @@ macro_rules! tuple {
                         $({
                             let mut value: Option<$n> = None;
                             s.visit(Deserialize::begin(&mut value), c)?;
-                            value.ok_or(Error::MissingElement($i))?
+                            value.ok_or(Error::missing_element($i))?
                         },)*
                         ));
                         while s.visit(Visitor::ignore(), c)? {}
@@ -379,7 +379,7 @@ where
                 let mut hashmap = HashMap::with_hasher(H::default());
                 let mut element = None;
                 while let Some(k) = m.next()? {
-                    let k = K::from_str(k).map_err(|_| Error::InvalidMapKey(k.to_string()))?;
+                    let k = K::from_str(k).map_err(|_| Error::invalid_map_key(k.to_string()))?;
                     m.visit(Deserialize::begin(&mut element), c)?;
                     element.take().map(|e| hashmap.insert(k, e));
                 }
@@ -399,7 +399,7 @@ impl<'de, K: FromStr + Ord, V: Deserialize<'de>> Deserialize<'de> for BTreeMap<K
                 let mut btree = BTreeMap::new();
                 let mut element = None;
                 while let Some(k) = m.next()? {
-                    let k = K::from_str(k).map_err(|_| Error::InvalidMapKey(k.to_string()))?;
+                    let k = K::from_str(k).map_err(|_| Error::invalid_map_key(k.to_string()))?;
                     m.visit(Deserialize::begin(&mut element), c)?;
                     element.take().map(|e| btree.insert(k, e));
                 }

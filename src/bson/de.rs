@@ -5,7 +5,7 @@ use std::str;
 
 use crate::bytes::guess_align_of;
 use crate::de::{Context, Deserialize, Map, Seq, Visitor};
-use crate::error::{Error, ErrorAt, Result, ResultAt};
+use crate::error::{Error, Result};
 
 /// Deserialize a BSON byte slice into any deserializable type.
 ///
@@ -31,16 +31,12 @@ use crate::error::{Error, ErrorAt, Result, ResultAt};
 ///     Ok(())
 /// }
 /// ```
-pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> ResultAt<T> {
+pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    let bson = BsonDe::new(b);
-    bson.deserialize(T::begin(&mut out), ctx)
-        .map_err(|err| ErrorAt {
-            line: 0,
-            column: bson.index,
-            err,
-        })?;
-    out.ok_or(Error.into())
+    let mut de = BsonDe::new(b);
+    de.deserialize(T::begin(&mut out), ctx)
+        .map_err(|e| e.append_line_and_column(0, de.index))?;
+    out.ok_or_else(Error::unknown)
 }
 
 struct BsonDe<'de> {
@@ -62,7 +58,7 @@ macro_rules! read_byte_impl {
                     MaybeUninit::<[u8; std::mem::size_of::<$t>()]>::uninit()
                         .assume_init()
                 };
-                self.buffer.read_exact(&mut a).map_err(|err| Error::Generic(Box::new(err)))?;
+                self.buffer.read_exact(&mut a).map_err(|err| Error::generic(err.to_string()))?;
                 self.index += std::mem::size_of::<$t>();
                 Ok($t::from_le_bytes(a))
             }
@@ -83,7 +79,7 @@ impl<'de> BsonDe<'de> {
         }
     }
 
-    fn deserialize(mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+    fn deserialize(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
         // Root document size
         self.read_u32()? as usize;
 
@@ -91,11 +87,12 @@ impl<'de> BsonDe<'de> {
 
         // Read custom alignment requirement root
         if self.key == "align" {
-            let mut align: Option<u8> = None;
-            self.visit(u8::begin(&mut align), c)?;
+            let mut align: Option<u32> = None;
+            self.visit(u32::begin(&mut align), c)?;
+            let align = align.unwrap() as usize;
             // Alignment not met
-            if align.unwrap() as usize > self.align {
-                Err(Error)?
+            if align > self.align {
+                Err(Error::lower_alignment_rank(align, self.align))?
             }
             self.next()?; // Next filed (blank name) will be the actual data
         }
@@ -103,8 +100,10 @@ impl<'de> BsonDe<'de> {
         self.visit(v, c)?;
 
         // Document done and all input was consumed
-        if self.read_u8()? != 0 || self.buffer.len() != 0 {
-            Err(Error.into())
+        if self.read_u8()? != 0 {
+            Err(Error("root document not ended".to_string()))
+        } else if self.buffer.len() != 0 {
+            Err(err!("buffer has {} bytes left", self.buffer.len()))
         } else {
             Ok(())
         }
@@ -147,8 +146,8 @@ impl<'de> BsonDe<'de> {
             0x8F => {
                 // Aligned data!
                 let size = self.read_u32()?;
-                let align: u8 = self.read_u8()?;
-                let offset = self.read_u8()?;
+                let align = self.read_u32()? as usize;
+                let offset = self.read_u32()? as usize;
                 self.read_bytes(offset as usize)?;
                 let b = self.read_bytes(size as usize)?;
 
@@ -157,8 +156,7 @@ impl<'de> BsonDe<'de> {
                     || align == 0
                     || b.as_ptr().align_offset(align as usize) != 0
                 {
-                    // TODO: align off by ...
-                    Err(Error)?
+                    Err(Error::not_aligned(align, offset))?
                 }
 
                 v.bytes(b, c)?;
@@ -169,7 +167,7 @@ impl<'de> BsonDe<'de> {
                 let bytes = self.read_bytes((size - 1) as usize)?;
                 // TODO: Maybe implement the `lookup4` algorithm
                 if !faster_utf8_validator::validate(bytes) {
-                    Err(Error)?
+                    Err(Error::invalid_utf8())?
                 }
                 let s = unsafe { str::from_utf8_unchecked(bytes) };
                 self.read_u8()?; // read the '\0'
@@ -212,7 +210,7 @@ impl<'de> BsonDe<'de> {
                 self.read_u8()?; // '\0' (end document)
                 self.skip(e + 1) // No matter what skip the entire document
             }
-            _ => Err(Error)?, // Unknown type
+            ty => Err(err!("unknown type ({})", ty))?, // Unknown type
         }
         Ok(())
     }
@@ -235,7 +233,11 @@ impl<'de> BsonDe<'de> {
             self.index += length;
             Ok(buf)
         } else {
-            Err(Error.into())
+            Err(err!(
+                "expected to read {} bytes but buffer only have {} left",
+                length,
+                self.buffer.len()
+            ))
         }
     }
 
@@ -246,7 +248,7 @@ impl<'de> BsonDe<'de> {
                 continue;
             }
             if !byte.is_ascii() {
-                break;
+                Err(err!("non ascii char ({}) in field name", byte))?
             }
 
             unsafe {
@@ -263,7 +265,7 @@ impl<'de> BsonDe<'de> {
             }
         }
 
-        Err(Error.into())
+        unreachable!()
     }
 }
 

@@ -22,6 +22,7 @@ simd-json = { version = "0.3.14", default-features = false, features = ["swar-nu
 paste = "1.0.0"
 faster-utf8-validator = { git = "https://github.com/simd-lite/faster-utf8-validator-rs", branch = "main" }
 anyhow = { version = "1.0", optional = true }
+ufmt = { version = "0.1.0", features = ["std"], optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
@@ -40,10 +41,13 @@ members = ["derive"]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
-default = ["simd"]
+default = ["simd", "ufmt1"]
 
-# SIMD deserialization (default)
+# SIMD deserialization (enabled by default)
 simd = ["simd-json"]
+
+# Uses the `ufmt` crate to format errors (enabled by default)
+ufmt1 = ["ufmt"]
 
 # Use ser and de `Context` as std::any::Any
 any-context = []

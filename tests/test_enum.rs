@@ -41,7 +41,7 @@ impl<'de> Deserialize<'de> for E {
                         self.out = Some(E::Z);
                         Ok(())
                     }
-                    _ => Err(knocknoc::Error),
+                    __variant => Err(knocknoc::Error::unknown_variant(__variant)),
                 }
             }
 

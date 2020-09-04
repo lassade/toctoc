@@ -145,11 +145,11 @@ impl<'de> BsonDe<'de> {
             }
             0x8F => {
                 // Aligned data!
-                let size = self.read_u32()?;
+                let size = self.read_u32()? as usize;
                 let align = self.read_u32()? as usize;
                 let offset = self.read_u32()? as usize;
-                self.read_bytes(offset as usize)?;
-                let b = self.read_bytes(size as usize)?;
+                self.read_bytes(offset)?;
+                let b = self.read_bytes(size)?;
 
                 // Error if isn't aligned or not valid align
                 if !align.is_power_of_two()

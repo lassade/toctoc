@@ -56,6 +56,12 @@ macro_rules! test_primitive {
 
         let mut ground = vec![];
         let mut doc = bson::Document::new();
+
+        if cfg!(feature = "higher-rank-alignment") {
+            doc.entry("algin".to_string())
+                .or_insert(bson::to_bson(&4i32).unwrap());
+        }
+
         doc.entry("".to_string())
             .or_insert(bson::to_bson(&$p).unwrap());
         doc.to_writer(&mut ground).unwrap();

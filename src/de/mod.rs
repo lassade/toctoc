@@ -115,8 +115,8 @@
 //!                 _ => m.visit(Visitor::ignore(), c)?,
 //!             }
 //!         }
-//!         let code = code.ok_or(Error)?;
-//!         let message = message.ok_or(Error)?;
+//!         let code = code.ok_or(Error::missing_field("code"))?;
+//!         let message = message.unwrap_or_else(Default::default); // Optional field
 //!         self.out = Some(Demo { code, message });
 //!         Ok(())
 //!     }

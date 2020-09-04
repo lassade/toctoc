@@ -155,6 +155,24 @@ macro_rules! write_impl {
 
 write_impl!(u8, i8, u32, i32, u64, i64, f32, f64);
 
+macro_rules! replace_impl {
+    ($($t:ty),*) => {
+        impl Buffer {
+            $(paste! {
+                pub fn [<replace_ $t>] (&mut self, index: usize, value: $t) {
+                    self.iter_mut()
+                        .skip(index)
+                        .zip(value.to_le_bytes().iter().copied())
+                        .for_each(|(b, a)| *b = a);
+                }
+            })*
+        }
+    };
+}
+
+// ? NOTE: This is the only needed value
+replace_impl!(u32);
+
 impl std::ops::Index<usize> for Buffer {
     type Output = u8;
 

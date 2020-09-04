@@ -49,12 +49,11 @@ impl<'a> BsonSer<'a> {
         // Root document
         bson.begin_doc();
 
-        // TODO: align should be a u64 ...
         if cfg!(feature = "higher-rank-alignment") {
             // Serialize the alignment requirement as the first document field
             bson.field = Some("align");
-            bson.byte(bson.align as u8);
-            assert_eq!(bson.buffer.len(), 12); // Make sure the alignment is the 11th byte on buffer
+            bson.uint(bson.align as u32);
+            assert_eq!(bson.buffer.len(), 15); // Make sure the alignment is the 11th byte on buffer
         }
 
         bson
@@ -91,11 +90,7 @@ impl<'a> BsonSer<'a> {
         // End document
         let i = self.doc.pop().unwrap();
         let l = self.buffer.len();
-        self.buffer
-            .iter_mut()
-            .skip(i)
-            .zip(&((l - i + 1) as u32).to_le_bytes()[..])
-            .for_each(|(x, a)| *x = *a);
+        self.buffer.replace_u32(i, (l - i + 1) as u32);
         self.buffer.write_u8(0x00_u8);
     }
 }
@@ -165,13 +160,13 @@ impl<'a> Serializer for BsonSer<'a> {
         } else {
             self.element(0x8F); // Aligned data!
             self.buffer.write_u32(b.len() as u32);
-            self.buffer.write_u8(a as u8);
+            self.buffer.write_u32(a as u32);
 
             if a > self.align {
                 if cfg!(feature = "higher-rank-alignment") {
                     // Buffer must have a higher align requirement
                     self.align = a;
-                    self.buffer[11] = a as u8;
+                    self.buffer.replace_u32(11, a as u32);
                 } else {
                     // Sorry, a panic now is better than later figuring the data can't be properly read
                     unimplemented!(
@@ -183,10 +178,11 @@ impl<'a> Serializer for BsonSer<'a> {
                 }
             }
 
+            self.buffer.write_u32(0); // Data offset
             let index = self.buffer.len();
-            self.buffer.write_u8(0); // Data offset
-            let offset = (self.buffer.extend_from_slice_aligned(&b, a) - index - 1) as u8;
-            self.buffer[index] = offset;
+            let offset = self.buffer.extend_from_slice_aligned(&b, a) - index;
+            self.buffer
+                .replace_u32(index - std::mem::size_of::<u32>(), offset as u32);
         }
     }
 

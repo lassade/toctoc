@@ -40,10 +40,10 @@ pub struct Error(pub(crate) String);
 impl Error {
     pub(crate) fn append_line_and_column(mut self, line: usize, column: usize) -> Self {
         if cfg!(feature = "ufmt1") {
-            ufmt::uwrite!(&mut self.0, " {}:{}", line, column).unwrap();
+            ufmt::uwrite!(&mut self.0, ", {}:{}", line, column).unwrap();
         } else {
             use std::fmt::Write;
-            write!(&mut self.0, " {}:{}", line, column).unwrap();
+            write!(&mut self.0, ", {}:{}", line, column).unwrap();
         }
         self
     }

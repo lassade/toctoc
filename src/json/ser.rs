@@ -3,7 +3,7 @@ use crate::ser::{Context, Serialize, Serializer, SerializerMap, SerializerSeq};
 /// Serialize any serializable type into a JSON string.
 ///
 /// ```rust
-/// use knocknoc::{json, Serialize};
+/// use toctoc::{json, Serialize};
 ///
 /// #[derive(Serialize, Debug)]
 /// struct Example {

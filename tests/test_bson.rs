@@ -1,6 +1,6 @@
-use knocknoc::bytes::Bytes;
-use knocknoc::{Deserialize as KDeserialize, Serialize as KSerialize};
 use serde::{Deserialize, Serialize};
+use toctoc::bytes::Bytes;
+use toctoc::{Deserialize as KDeserialize, Serialize as KSerialize};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, KDeserialize, KSerialize)]
 struct V {
@@ -29,7 +29,7 @@ fn test_bson_struct() {
         int: 5,
     };
 
-    let bin = knocknoc::bson::to_bin(&v, &());
+    let bin = toctoc::bson::to_bin(&v, &());
 
     let mut ground = vec![];
     bson::to_bson(&Primitive { val: v.clone() })
@@ -46,13 +46,13 @@ fn test_bson_struct() {
 
     assert_eq!(v, v1.val);
 
-    let v2 = knocknoc::bson::from_bin(&bin, &mut ()).unwrap();
+    let v2 = toctoc::bson::from_bin(&bin, &mut ()).unwrap();
     assert_eq!(v, v2);
 }
 
 macro_rules! test_primitive {
     ($p:expr, $t:ty) => {{
-        let bin = knocknoc::bson::to_bin(&$p, &());
+        let bin = toctoc::bson::to_bin(&$p, &());
 
         let mut ground = vec![];
         let mut doc = bson::Document::new();
@@ -86,8 +86,8 @@ fn bson_zero_copy() {
     let m0 = MeshReadOnly {
         verts: Bytes::new(&[[0xAA55AA55, 0], [0, 0], [0, 0], [0, 0]][..]),
     };
-    let bson = knocknoc::bson::to_bin(&m0, &());
+    let bson = toctoc::bson::to_bin(&m0, &());
     assert_eq!(bson.as_ptr().align_offset(4), 0);
-    let m1: MeshReadOnly = knocknoc::bson::from_bin(&bson, &mut ()).unwrap();
+    let m1: MeshReadOnly = toctoc::bson::from_bin(&bson, &mut ()).unwrap();
     assert_eq!(m0, m1);
 }

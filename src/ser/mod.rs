@@ -1,12 +1,12 @@
 //! Serialization traits.
 //!
-//! Serialization in knocknoc works by traversing an input object and
+//! Serialization in toctoc works by traversing an input object and
 //! decomposing it iteratively into a stream of fragments.
 //!
 //! ## Serializing a primitive
 //!
 //! ```rust
-//! use knocknoc::ser::{Serialize, Visitor, Context, Done};
+//! use toctoc::ser::{Serialize, Visitor, Context, Done};
 //!
 //! // The data structure that we want to serialize as a primitive.
 //! struct MyBoolean(bool);
@@ -21,7 +21,7 @@
 //! ## Serializing a sequence
 //!
 //! ```rust
-//! use knocknoc::ser::{Serialize, Visitor, Context, Done};
+//! use toctoc::ser::{Serialize, Visitor, Context, Done};
 //!
 //! // Some custom sequence type that we want to serialize.
 //! struct MyVec<T>(Vec<T>);
@@ -43,7 +43,7 @@
 //! `#[derive(Serialize)]`.
 //!
 //! ```rust
-//! use knocknoc::ser::{Serialize, Visitor, Context, Done};
+//! use toctoc::ser::{Serialize, Visitor, Context, Done};
 //!
 //! // The struct that we would like to serialize.
 //! struct Demo {
@@ -279,4 +279,4 @@ pub trait Context {
 impl Context for () {}
 
 #[cfg(feature = "any-context")]
-pub type Context = std::any::Any;
+pub trait Context = std::any::Any;

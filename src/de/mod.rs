@@ -1,6 +1,6 @@
 //! Deserialization traits.
 //!
-//! Deserialization in knocknoc works by returning a "place" into which data
+//! Deserialization in toctoc works by returning a "place" into which data
 //! may be written through the methods of the `Visitor` trait object.
 //!
 //! Use the `make_place!` macro to acquire a "place" type. A library may use a
@@ -24,8 +24,8 @@
 //! type.
 //!
 //! ```rust
-//! use knocknoc::{make_place, Result};
-//! use knocknoc::de::{Deserialize, Visitor};
+//! use toctoc::{make_place, Result};
+//! use toctoc::de::{Deserialize, Visitor};
 //!
 //! make_place!(Place);
 //!
@@ -59,8 +59,8 @@
 //! that can hand out places to write sequence elements one element at a time.
 //!
 //! ```rust
-//! use knocknoc::{make_place, Result};
-//! use knocknoc::de::{Deserialize, Seq, Visitor, Context};
+//! use toctoc::{make_place, Result};
+//! use toctoc::de::{Deserialize, Seq, Visitor, Context};
 //! use std::mem;
 //!
 //! make_place!(Place);
@@ -93,8 +93,8 @@
 //! `#[derive(Deserialize)]`.
 //!
 //! ```rust
-//! use knocknoc::{make_place, Result, Error};
-//! use knocknoc::de::{Deserialize, Map, Visitor, Context};
+//! use toctoc::{make_place, Result, Error};
+//! use toctoc::de::{Deserialize, Map, Visitor, Context};
 //!
 //! make_place!(Place);
 //!
@@ -142,8 +142,8 @@ pub trait Deserialize<'de>: Sized {
     /// The only correct implementation of this method is:
     ///
     /// ```rust
-    /// # use knocknoc::make_place;
-    /// # use knocknoc::de::{Deserialize, Visitor};
+    /// # use toctoc::make_place;
+    /// # use toctoc::de::{Deserialize, Visitor};
     /// #
     /// # make_place!(Place);
     /// # struct S;
@@ -256,4 +256,4 @@ pub trait Context {
 impl Context for () {}
 
 #[cfg(feature = "any-context")]
-pub type Context = std::any::Any;
+pub trait Context = std::any::Any;

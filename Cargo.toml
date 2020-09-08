@@ -1,11 +1,11 @@
 [package]
-name = "knocknoc"
+name = "toctoc"
 version = "0.1.13"
 authors = ["Felipe Jorge <felipe.jorge.pereira@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Data structure serialization library with several opposite design goals from Serde."
-repository = "https://github.com/dtolnay/knocknoc"
-documentation = "https://docs.rs/knocknoc"
+repository = "https://github.com/dtolnay/toctoc"
+documentation = "https://docs.rs/toctoc"
 readme = "README.md"
 edition = "2018"
 
@@ -15,7 +15,7 @@ lto = false
 
 [dependencies]
 itoa = "0.4.3"
-knocknoc_internal = { version = "=0.1.13", path = "derive" }
+toctoc_internal = { version = "=0.1.13", path = "derive" }
 ryu = "1.0"
 bintext = "0.1.3"
 simd-json = { version = "0.3.14", default-features = false, features = ["swar-number-parsing"], optional = true }
@@ -49,11 +49,11 @@ simd = ["simd-json"]
 # Uses the `ufmt` crate to format errors (enabled by default)
 ufmt1 = ["ufmt"]
 
-# Use ser and de `Context` as std::any::Any
+# Use ser and de `Context` as std::any::Any (requires nighlty)
 any-context = []
 
-# Manipulates the stack to (de)serialize deeply nested structs
-deeply-nested = []
+# # Manipulates the stack to (de)serialize deeply nested structs
+# deeply-nested = []
 
 # Better errors when debuging
 error = ["anyhow"]

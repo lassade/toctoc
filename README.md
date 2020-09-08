@@ -1,16 +1,16 @@
-Knocknoc
+toctoc
 =========
 
 *Simpler serde alternative with about the same feature set,
 does less but is also way less intimidating to modify*
 
-[![](https://github.com/lassade/knocknoc/workflows/Build/badge.svg)](https://github.com/lassade/knocknoc/actions?query=workflow%3ABuild)
+[![](https://github.com/lassade/toctoc/workflows/Build/badge.svg)](https://github.com/lassade/toctoc/actions?query=workflow%3ABuild)
 
 ## About
 
-`knocknoc` tries to be a simple alternative to `serde` by only using
-trait objects. It also supports contextual (de)serialization, have a similar
-but simplified api (less methods with most of the functionality).
+`toctoc` (brazilian "knock knock" onomatopoeia) tries to be a simple alternative
+to `serde` by only using trait objects. It also supports contextual (de)serialization,
+have a similar but simplified api (less methods with most of the functionality).
 It's also fast and lightweight;
 
 The `derive` can be used for quick implementations of both
@@ -101,7 +101,7 @@ be lightweight (take less binary space), but is limited to a few formats
 and by design will be hard to work with new ones;
 
 - `miniserde` The stack free feature makes the implementation much more hard that it needs to be,
-`knocknoc` achieves the same result by dynamically increasing the stack, whenever needed;
+`toctoc` achieves the same result by dynamically increasing the stack, whenever needed;
 
 Miniserde (original)
 =========
@@ -118,7 +118,7 @@ qualified below.
 
 ```toml
 [dependencies]
-knocknoc = "0.1"
+toctoc = "0.1"
 ```
 
 Version requirement: rustc 1.31+
@@ -126,7 +126,7 @@ Version requirement: rustc 1.31+
 ### Example
 
 ```rust
-use knocknoc::{json, Serialize, Deserialize};
+use toctoc::{json, Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Example {
@@ -134,7 +134,7 @@ struct Example {
     message: String,
 }
 
-fn main() -> knocknoc::Result<()> {
+fn main() -> toctoc::Result<()> {
     let example = Example {
         code: 200,
         message: "reminiscent of Serde".to_owned(),

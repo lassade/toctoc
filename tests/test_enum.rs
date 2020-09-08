@@ -1,6 +1,6 @@
-use knocknoc::de::{self, Deserialize};
-use knocknoc::json;
-use knocknoc::ser::{self, Done, Serialize};
+use toctoc::de::{self, Deserialize};
+use toctoc::json;
+use toctoc::ser::{self, Done, Serialize};
 
 #[derive(Debug, PartialEq)]
 enum E {
@@ -14,7 +14,7 @@ impl Serialize for E {
     fn begin(&self, v: ser::Visitor, c: &dyn ser::Context) -> Done {
         match self {
             E::W { a, b } => {
-                #[derive(knocknoc::Serialize)]
+                #[derive(toctoc::Serialize)]
                 struct Inner<'a> {
                     a: &'a i32,
                     b: &'a i32,
@@ -29,19 +29,19 @@ impl Serialize for E {
     }
 }
 
-knocknoc::make_place!(Place);
+toctoc::make_place!(Place);
 
 #[allow(unused_parens)]
 impl<'de> Deserialize<'de> for E {
     fn begin(out: &mut Option<Self>) -> &mut dyn de::Visitor<'de> {
         impl<'de> de::Visitor<'de> for Place<E> {
-            fn string(&mut self, s: &str, _: &mut dyn de::Context) -> knocknoc::Result<()> {
+            fn string(&mut self, s: &str, _: &mut dyn de::Context) -> toctoc::Result<()> {
                 match s {
                     "Z" => {
                         self.out = Some(E::Z);
                         Ok(())
                     }
-                    __variant => Err(knocknoc::Error::unknown_variant(__variant)),
+                    __variant => Err(toctoc::Error::unknown_variant(__variant)),
                 }
             }
 
@@ -49,10 +49,10 @@ impl<'de> Deserialize<'de> for E {
                 &mut self,
                 m: &mut dyn de::Map<'de>,
                 c: &mut dyn de::Context,
-            ) -> knocknoc::Result<()> {
+            ) -> toctoc::Result<()> {
                 match m.next()? {
                     Some("W") => {
-                        #[derive(knocknoc::Deserialize)]
+                        #[derive(toctoc::Deserialize)]
                         struct Inner {
                             a: i32,
                             b: i32,
@@ -65,17 +65,17 @@ impl<'de> Deserialize<'de> for E {
                     }
                     Some("X") => {
                         let mut v: Option<(i32, i32)> = None;
-                        m.visit(knocknoc::de::Deserialize::begin(&mut v), c)?;
+                        m.visit(toctoc::de::Deserialize::begin(&mut v), c)?;
                         let v = v.unwrap();
                         self.out = Some(E::X(v.0, v.1));
                     }
                     Some("Y") => {
                         let mut v: Option<(i32)> = None;
-                        m.visit(knocknoc::de::Deserialize::begin(&mut v), c)?;
+                        m.visit(toctoc::de::Deserialize::begin(&mut v), c)?;
                         let v = v.unwrap();
                         self.out = Some(E::Y(v));
                     }
-                    _ => m.visit(knocknoc::de::Visitor::ignore(), c)?,
+                    _ => m.visit(toctoc::de::Visitor::ignore(), c)?,
                 }
 
                 Ok(())

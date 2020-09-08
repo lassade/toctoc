@@ -4,8 +4,8 @@ extern crate criterion;
 use core::time::Duration;
 use criterion::{black_box, BatchSize, Criterion, ParameterizedBenchmark, Throughput};
 
-use knocknoc::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
 use serde_derive::{Deserialize, Serialize};
+use toctoc::{Deserialize as MiniDeserialize, Serialize as MiniSerialize};
 
 const LEN: usize = 100_000;
 const WARM_UP_TIME: Duration = Duration::from_secs(5);
@@ -27,11 +27,11 @@ fn cmp(c: &mut Criterion) {
     c.bench(
         "ser/json",
         ParameterizedBenchmark::new(
-            "knocknoc",
+            "toctoc",
             |b, _| {
                 b.iter_batched(
                     || input_struct(),
-                    |value| black_box(knocknoc::json::to_string(&value, &())),
+                    |value| black_box(toctoc::json::to_string(&value, &())),
                     BatchSize::NumIterations(LEN as u64),
                 )
             },
@@ -52,12 +52,12 @@ fn cmp(c: &mut Criterion) {
     c.bench(
         "de/json",
         ParameterizedBenchmark::new(
-            "knocknoc",
+            "toctoc",
             |b, data| {
                 b.iter_batched(
                     || data.clone(),
                     |mut value| {
-                        black_box(knocknoc::json::from_str::<Twitter>(&mut value, &mut ()).unwrap())
+                        black_box(toctoc::json::from_str::<Twitter>(&mut value, &mut ()).unwrap())
                     },
                     BatchSize::NumIterations(LEN as u64),
                 )
@@ -86,11 +86,11 @@ fn cmp(c: &mut Criterion) {
     c.bench(
         "ser/bson",
         ParameterizedBenchmark::new(
-            "knocknoc",
+            "toctoc",
             |b, _| {
                 b.iter_batched(
                     || input_struct(),
-                    |value| black_box(knocknoc::bson::to_bin(&value, &mut ())),
+                    |value| black_box(toctoc::bson::to_bin(&value, &mut ())),
                     BatchSize::NumIterations(LEN as u64),
                 )
             },
@@ -104,17 +104,15 @@ fn cmp(c: &mut Criterion) {
     c.bench(
         "de/bson",
         ParameterizedBenchmark::new(
-            "knocknoc",
+            "toctoc",
             |b, data| {
                 b.iter_batched(
                     || data.clone(),
-                    |value| {
-                        black_box(knocknoc::bson::from_bin::<Twitter>(&value, &mut ()).unwrap())
-                    },
+                    |value| black_box(toctoc::bson::from_bin::<Twitter>(&value, &mut ()).unwrap()),
                     BatchSize::NumIterations(LEN as u64),
                 )
             },
-            vec![knocknoc::bson::to_bin(&input_struct(), &())],
+            vec![toctoc::bson::to_bin(&input_struct(), &())],
         )
         .throughput(|d| Throughput::Bytes(d.len() as u64))
         .warm_up_time(WARM_UP_TIME)

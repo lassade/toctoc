@@ -10,7 +10,7 @@ use crate::json::HEX_HINT;
 /// Deserialize a JSON string into any deserializable type.
 ///
 /// ```rust
-/// use knocknoc::{json, Deserialize};
+/// use toctoc::{json, Deserialize};
 ///
 /// #[derive(Deserialize, Debug)]
 /// struct Example {
@@ -18,7 +18,7 @@ use crate::json::HEX_HINT;
 ///     message: String,
 /// }
 ///
-/// fn main() -> knocknoc::Result<()> {
+/// fn main() -> toctoc::Result<()> {
 ///     let j = r#" {"code": 200, "message": "reminiscent of Serde"} "#;
 ///
 ///     let out: Example = json::from_str(&j, &mut ())?;

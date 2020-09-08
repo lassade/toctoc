@@ -13,7 +13,7 @@ use crate::Place;
 /// arbitrarily deeply nested instances.
 ///
 /// ```rust
-/// use knocknoc::json::{Array, Value};
+/// use toctoc::json::{Array, Value};
 ///
 /// let mut value = Value::Null;
 /// for _ in 0..100000 {

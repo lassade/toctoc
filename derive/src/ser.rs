@@ -34,7 +34,7 @@ fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenStrea
         #[doc(hidden)]
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const _: () = {
-            use knocknoc as __crate;
+            use toctoc as __crate;
 
             impl #impl_generics __crate::ser::Serialize for #ident #ty_generics #where_clause {
                 fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {
@@ -78,7 +78,7 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenStrea
         #[doc(hidden)]
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const _: () = {
-            use knocknoc as __crate;
+            use toctoc as __crate;
 
             impl __crate::ser::Serialize for #ident {
                 fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {

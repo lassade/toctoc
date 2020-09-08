@@ -1,6 +1,6 @@
 /// Macro to define a "place" type compatible with deserialization.
 ///
-/// [Refer to the `knocknoc::de` documentation for examples.][::de]
+/// [Refer to the `toctoc::de` documentation for examples.][::de]
 ///
 /// This macro expands to:
 ///

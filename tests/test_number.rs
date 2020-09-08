@@ -1,5 +1,5 @@
-use knocknoc::json;
 use std::f64;
+use toctoc::json;
 
 #[test]
 fn test_ser() {

@@ -1,5 +1,5 @@
-use knocknoc::bytes::Bytes;
-use knocknoc::json;
+use toctoc::bytes::Bytes;
+use toctoc::json;
 
 macro_rules! bin {
     ($ty:ty, $align:expr, $bytes:expr, $string:expr) => {{

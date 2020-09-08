@@ -4,8 +4,8 @@ use crate::ser::{Context, Serialize, Serializer, SerializerMap, SerializerSeq};
 /// Serialize any serializable type into a BSON byte vec.
 ///
 /// ```rust
-/// use knocknoc::{bson, Serialize};
-/// use knocknoc::export::hex;
+/// use toctoc::{bson, Serialize};
+/// use toctoc::export::hex;
 ///
 /// #[derive(Serialize, Debug)]
 /// struct Example {

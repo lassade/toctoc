@@ -10,8 +10,8 @@ use crate::error::{Error, Result};
 /// Deserialize a BSON byte slice into any deserializable type.
 ///
 /// ```rust
-/// use knocknoc::{bson, Deserialize};
-/// use knocknoc::export::hex;
+/// use toctoc::{bson, Deserialize};
+/// use toctoc::export::hex;
 ///
 /// #[derive(Deserialize, Debug)]
 /// struct Example {
@@ -19,7 +19,7 @@ use crate::error::{Error, Result};
 ///     message: String,
 /// }
 ///
-/// fn main() -> knocknoc::Result<()> {
+/// fn main() -> toctoc::Result<()> {
 ///     let h = "3800000003003100000083636f646500c8000000026d\
 ///              657373616765001500000072656d696e697363656e74\
 ///              206f66205365726465000000";

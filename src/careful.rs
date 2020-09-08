@@ -4,8 +4,8 @@
 // on the heap in a way that ensures all internal references are live at the
 // right times.
 //
-// The unsafety is contained to the implementation of knocknoc::json and not
-// exposed to Serialize and Deserialize impls, so the knocknoc public API
+// The unsafety is contained to the implementation of toctoc::json and not
+// exposed to Serialize and Deserialize impls, so the toctoc public API
 // remains entirely safe to use.
 //
 //     careful!(EXPR as TYPE)

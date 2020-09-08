@@ -1,4 +1,4 @@
-use knocknoc::{json, Deserialize, Serialize};
+use toctoc::{json, Deserialize, Serialize};
 
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
 struct Message<'str> {

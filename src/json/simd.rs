@@ -7,7 +7,7 @@ use simd_json::{Node, StaticNode};
 /// Deserialize a JSON string into any deserializable type.
 ///
 /// ```rust
-/// use knocknoc::{json, Deserialize};
+/// use toctoc::{json, Deserialize};
 ///
 /// #[derive(Deserialize, Debug)]
 /// struct Example {
@@ -15,7 +15,7 @@ use simd_json::{Node, StaticNode};
 ///     message: String,
 /// }
 ///
-/// fn main() -> knocknoc::Result<()> {
+/// fn main() -> toctoc::Result<()> {
 ///     let mut j = r#" {"code": 200, "message": "reminiscent of Serde"} "#.to_string();
 ///
 ///     let out: Example = json::from_str(&mut j, &mut ())?;

@@ -1,11 +1,11 @@
 [package]
-name = "knocknoc_internal"
+name = "toctoc_internal"
 version = "0.1.13"
 authors = ["David Tolnay <dtolnay@gmail.com>", "Felipe Jorge <felipe.jorge.pereira@gmail.com>"]
 license = "MIT OR Apache-2.0"
-description = "Derive macros for knocknoc. Use the re-exports from the knocknoc crate instead."
-repository = "https://github.com/dtolnay/knocknoc"
-documentation = "https://docs.rs/knocknoc"
+description = "Derive macros for toctoc. Use the re-exports from the toctoc crate instead."
+repository = "https://github.com/dtolnay/toctoc"
+documentation = "https://docs.rs/toctoc"
 edition = "2018"
 
 [lib]

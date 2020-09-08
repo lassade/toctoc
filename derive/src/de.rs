@@ -34,14 +34,14 @@ pub fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenS
         .map(attr::name_of_field)
         .collect::<Result<Vec<_>>>()?;
 
-    let bound = parse_quote!(knocknoc::Deserialize);
+    let bound = parse_quote!(toctoc::Deserialize);
     let bounded_where_clause = bound::where_clause_with_bound(&input.generics, bound);
 
     Ok(quote! {
         #[doc(hidden)]
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const _: () = {
-            use knocknoc as __crate;
+            use toctoc as __crate;
 
             #[repr(C)]
             struct __Visitor #impl_generics #where_clause {
@@ -125,29 +125,29 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenS
         const #dummy: () = {
             #[repr(C)]
             struct __Visitor {
-                __out: knocknoc::export::Option<#ident>,
+                __out: toctoc::export::Option<#ident>,
             }
 
-            impl<'de> knocknoc::Deserialize<'de> for #ident {
-                fn begin(__out: &mut knocknoc::export::Option<Self>) -> &mut dyn knocknoc::de::Visitor<'de> {
+            impl<'de> toctoc::Deserialize<'de> for #ident {
+                fn begin(__out: &mut toctoc::export::Option<Self>) -> &mut dyn toctoc::de::Visitor<'de> {
                     unsafe {
                         &mut *{
                             __out
-                            as *mut knocknoc::export::Option<Self>
+                            as *mut toctoc::export::Option<Self>
                             as *mut __Visitor
                         }
                     }
                 }
             }
 
-            impl<'de> knocknoc::de::Visitor<'de> for __Visitor {
-                fn string(&mut self, s: &'de knocknoc::export::str, context: &mut dyn knocknoc::de::Context) -> knocknoc::Result<()> {
+            impl<'de> toctoc::de::Visitor<'de> for __Visitor {
+                fn string(&mut self, s: &'de toctoc::export::str, context: &mut dyn toctoc::de::Context) -> toctoc::Result<()> {
                     let value = match s {
                         #( #names => #ident::#var_idents, )*
-                        __variant => { knocknoc::export::Err(knocknoc::Error::unknown_variant(__variant))? },
+                        __variant => { toctoc::export::Err(toctoc::Error::unknown_variant(__variant))? },
                     };
-                    self.__out = knocknoc::export::Some(value);
-                    knocknoc::export::Ok(())
+                    self.__out = toctoc::export::Some(value);
+                    toctoc::export::Ok(())
                 }
             }
         };

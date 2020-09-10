@@ -1,8 +1,8 @@
-use toctoc::json::{self, Value};
-
 #[test]
 #[cfg(feature = "deeply-nested")]
 fn test_round_trip_deeply_nested() {
+    use toctoc::json::{self, Value};
+
     let mut j = String::new();
     for _ in 0..100_000 {
         j.push_str("{\"x\":[");

@@ -3,7 +3,7 @@ use toctoc::{json, Deserialize, Serialize};
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 enum Tag {
     A,
-    #[serde(rename = "renamedB")]
+    #[toctoc(rename = "renamedB")]
     B,
 }
 

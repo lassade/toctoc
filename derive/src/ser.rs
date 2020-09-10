@@ -1,34 +1,69 @@
-use crate::{attr, bound};
+use darling::{FromDeriveInput, FromField, FromVariant};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
-    parse_quote, Data, DataEnum, DataStruct, DeriveInput, Error, Fields, FieldsNamed, Ident, Result,
+    parse_quote, Data, DataEnum, DataStruct, DeriveInput, Error, Fields, FieldsNamed,
+    FieldsUnnamed, Ident, Result,
 };
 
-pub fn derive(input: DeriveInput) -> Result<TokenStream> {
+use crate::common::*;
+use crate::DeriveResult;
+use crate::{attr, bound};
+
+pub fn derive(input: DeriveInput) -> DeriveResult<TokenStream> {
     match &input.data {
-        Data::Struct(DataStruct {
-            fields: Fields::Named(fields),
-            ..
-        }) => derive_struct(&input, &fields),
+        Data::Struct(DataStruct { fields, .. }) => derive_struct(&input, &fields),
         Data::Enum(enumeration) => derive_enum(&input, enumeration),
-        _ => Err(Error::new(
-            Span::call_site(),
-            "currently only structs with named fields are supported",
-        )),
+        _ => Err(Error::new(Span::call_site(), "unions aren't supported").to_compile_error()),
     }
 }
 
-fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenStream> {
+fn derive_struct(input: &DeriveInput, fields: &Fields) -> DeriveResult<TokenStream> {
     let ident = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let fieldname = &fields.named.iter().map(|f| &f.ident).collect::<Vec<_>>();
-    let fieldstr = fields
-        .named
-        .iter()
-        .map(attr::name_of_field)
-        .collect::<Result<Vec<_>>>()?;
+    // TODO: Custom crate path
+    // TODO: Bound generics with serialize or custom bounds
+
+    let body = match fields {
+        Fields::Named(fields) => {
+            let mut field_name = vec![];
+            let mut field = vec![];
+
+            for f in &fields.named {
+                let opt = ToctocFieldOptions::from_field(f).map_err(|err| err.write_errors())?;
+
+                if opt.skip || opt.no_ser {
+                    continue;
+                }
+
+                let ident = opt.name().unwrap();
+                field.push(ident.clone());
+                field_name.push(ident.to_string());
+            }
+
+            quote! {
+                v.map()
+                #(.field(#field_name, &self.#field, c))*
+                .done()
+            }
+        }
+        Fields::Unnamed(fields) => {
+            let (field_name, field): (Vec<_>, Vec<_>) = fields
+                .unnamed
+                .iter()
+                .enumerate()
+                .map(|(i, _)| (i.to_string(), make_literal_int(i)))
+                .unzip();
+
+            quote! {
+                v.map()
+                #(.field(#field_name, &self.#field, c))*
+                .done()
+            }
+        }
+        Fields::Unit => quote! { v.null() },
+    };
 
     Ok(quote! {
         #[doc(hidden)]
@@ -38,41 +73,83 @@ fn derive_struct(input: &DeriveInput, fields: &FieldsNamed) -> Result<TokenStrea
 
             impl #impl_generics __crate::ser::Serialize for #ident #ty_generics #where_clause {
                 fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {
-                    v.map()
-                    #(.field(#fieldstr, &self.#fieldname, c))*
-                    .done()
+                    #body
                 }
             }
         };
     })
 }
 
-fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenStream> {
-    if input.generics.lt_token.is_some() || input.generics.where_clause.is_some() {
-        return Err(Error::new(
-            Span::call_site(),
-            "Enums with generics are not supported",
-        ));
-    }
-
+fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<TokenStream> {
     let ident = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let var_idents = enumeration
-        .variants
-        .iter()
-        .map(|variant| match variant.fields {
-            Fields::Unit => Ok(&variant.ident),
-            _ => Err(Error::new_spanned(
-                variant,
-                "Invalid variant: only simple enum variants without fields are supported",
-            )),
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let names = enumeration
-        .variants
-        .iter()
-        .map(attr::name_of_variant)
-        .collect::<Result<Vec<_>>>()?;
+    // TODO: Custom crate path
+    // TODO: Bound generics with serialize or custom bounds
+
+    let mut arm = vec![];
+
+    for v in &enumeration.variants {
+        let opt = ToctocVariantOptions::from_variant(v).map_err(|err| err.write_errors())?;
+
+        if opt.skip || opt.no_ser {
+            continue;
+        }
+
+        let variant = &opt.ident;
+        let name = opt.name().unwrap().to_string();
+
+        match &v.fields {
+            Fields::Named(_fields) => {
+                // TODO:
+                Err(
+                    Error::new(Span::call_site(), "struct variants aren't supported")
+                        .to_compile_error(),
+                )?;
+
+                // let mut field_name = vec![];
+                // let mut field = vec![];
+
+                // for f in &fields.named {
+                //     let opt =
+                //         ToctocFieldOptions::from_field(f).map_err(|err| err.write_errors())?;
+
+                //     if opt.skip || opt.no_ser {
+                //         continue;
+                //     }
+
+                //     let ident = opt.name().unwrap();
+                //     field.push(ident.clone());
+                //     field_name.push(ident.to_string());
+                // }
+
+                // arm.push(quote! {
+                //     v.map()
+                //     #(.field(#field_name, &self.#field, c))*
+                //     .done()
+                // })
+            }
+            Fields::Unnamed(fields) => {
+                let field: Vec<_> = fields
+                    .unnamed
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| make_ident(i))
+                    .collect();
+
+                arm.push(quote! {
+                    #ident::#variant (#(#field,)*) => {
+                        v.map()
+                        .field(name, &(#(#field,)*), c)
+                        .done()
+                    }
+                })
+            }
+            Fields::Unit => arm.push(quote! {
+                #ident::#variant => v.string(#name)
+            }),
+        }
+    }
 
     Ok(quote! {
         #[doc(hidden)]
@@ -80,12 +157,10 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> Result<TokenStrea
         const _: () = {
             use toctoc as __crate;
 
-            impl __crate::ser::Serialize for #ident {
+            impl #impl_generics __crate::ser::Serialize for #ident #ty_generics #where_clause {
                 fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {
                     match self {
-                        #(
-                            #ident::#var_idents => v.string(#names),
-                        )*
+                        #(#arm,)*
                     }
                 }
             }

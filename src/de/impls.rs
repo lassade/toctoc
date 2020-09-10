@@ -308,6 +308,77 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
     }
 }
 
+impl<'de, A: Deserialize<'de>> Deserialize<'de> for (A,) {
+    fn begin(out: &mut Option<Self>) -> &mut dyn Visitor<'de> {
+        impl<'de, A: Deserialize<'de>> Visitor<'de> for Place<(A,)> {
+            fn null(&mut self, c: &mut dyn Context) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).null(c)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn boolean(&mut self, b: bool) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).boolean(b)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn string(&mut self, s: &'de str, c: &mut dyn Context) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).string(s, c)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn negative(&mut self, n: i64, c: &mut dyn Context) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).negative(n, c)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn nonnegative(&mut self, n: u64, c: &mut dyn Context) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).nonnegative(n, c)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn single(&mut self, n: f32) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).single(n)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn double(&mut self, n: f64) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).double(n)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn seq(&mut self, s: &mut dyn Seq<'de>, c: &mut dyn Context) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).seq(s, c)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+
+            fn map(&mut self, m: &mut dyn Map<'de>, c: &mut dyn Context) -> Result<()> {
+                let mut value: Option<A> = None;
+                Deserialize::begin(&mut value).map(m, c)?;
+                self.out = value.map(|inner| (inner,));
+                Ok(())
+            }
+        }
+
+        Place::new(out)
+    }
+}
+
 macro_rules! tuple {
     ($(<$($n:ident $i:literal),*>),*) => { $(
         impl<'de, $($n: Deserialize<'de>,)*> Deserialize<'de> for ($($n,)*) {

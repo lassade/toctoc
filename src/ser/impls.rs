@@ -94,6 +94,12 @@ arrays!(
     28, 29, 30, 31, 32
 );
 
+impl<A: Serialize> Serialize for (A,) {
+    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+        self.0.begin(v, context)
+    }
+}
+
 macro_rules! tuple {
     ($(<$($n:ident $i:tt),*>),*) => { $(
         impl<$($n: Serialize,)*> Serialize for ($($n,)*) {

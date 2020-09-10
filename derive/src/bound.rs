@@ -1,8 +1,40 @@
 use proc_macro2::{Span, TokenStream};
 use syn::punctuated::Punctuated;
 use syn::{
-    parse_quote, GenericParam, Generics, Lifetime, LifetimeDef, WhereClause, WherePredicate,
+    parse_quote, GenericParam, Generics, Lifetime, LifetimeDef, TypeParamBound, WhereClause,
+    WherePredicate,
 };
+
+pub fn with_lifetime_bound(generics: &Generics, lifetime: &str) -> Generics {
+    let bound = Lifetime::new(lifetime, Span::call_site());
+    let def = LifetimeDef {
+        attrs: Vec::new(),
+        lifetime: bound.clone(),
+        colon_token: None,
+        bounds: Punctuated::new(),
+    };
+
+    let params = Some(GenericParam::Lifetime(def))
+        .into_iter()
+        .chain(generics.params.iter().cloned().map(|mut param| {
+            match &mut param {
+                GenericParam::Lifetime(param) => {
+                    param.bounds.push(bound.clone());
+                }
+                GenericParam::Type(param) => {
+                    param.bounds.push(TypeParamBound::Lifetime(bound.clone()));
+                }
+                GenericParam::Const(_) => {}
+            }
+            param
+        }))
+        .collect();
+
+    Generics {
+        params,
+        ..generics.clone()
+    }
+}
 
 pub fn within_lifetime_bound(generics: &Generics, lifetime: &str) -> Generics {
     let bound = Lifetime::new(lifetime, Span::call_site());
@@ -14,19 +46,17 @@ pub fn within_lifetime_bound(generics: &Generics, lifetime: &str) -> Generics {
     };
 
     def.bounds.extend(
-        generics
-            .params
-            .iter()
-            .filter_map(|mut param| match &mut param {
-                GenericParam::Lifetime(param) => Some(&param.lifetime),
-                _ => None,
+        generics.params.iter()
+            .filter_map(|mut param| {
+                match &mut param {
+                    GenericParam::Lifetime(param) => Some(&param.lifetime),
+                    _ => None,
+                }
             })
-            .cloned(),
+            .cloned()
     );
 
-    let params = generics
-        .params
-        .iter()
+    let params = generics.params.iter()
         .cloned()
         .chain(Some(GenericParam::Lifetime(def)))
         .collect();

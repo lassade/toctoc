@@ -1,32 +1,13 @@
-use toctoc::de::{self, Deserialize};
+use toctoc::de;
 use toctoc::json;
-use toctoc::ser::{self, Done, Serialize};
+use toctoc::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 enum E {
     W { a: i32, b: i32 },
     X(i32, i32),
     Y(i32),
     Z,
-}
-
-impl Serialize for E {
-    fn begin(&self, v: ser::Visitor, c: &dyn ser::Context) -> Done {
-        match self {
-            E::W { a, b } => {
-                #[derive(toctoc::Serialize)]
-                struct Inner<'a> {
-                    a: &'a i32,
-                    b: &'a i32,
-                };
-
-                v.map().field("W", &Inner { a: a, b: b }, c).done()
-            }
-            E::X(v0, v1) => v.map().field("X", &(v0, v1), c).done(),
-            E::Y(v0) => v.map().field("Y", &(v0), c).done(),
-            E::Z => v.string("Z"),
-        }
-    }
 }
 
 toctoc::make_place!(Place);

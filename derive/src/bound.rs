@@ -46,17 +46,19 @@ pub fn within_lifetime_bound(generics: &Generics, lifetime: &str) -> Generics {
     };
 
     def.bounds.extend(
-        generics.params.iter()
-            .filter_map(|mut param| {
-                match &mut param {
-                    GenericParam::Lifetime(param) => Some(&param.lifetime),
-                    _ => None,
-                }
+        generics
+            .params
+            .iter()
+            .filter_map(|mut param| match &mut param {
+                GenericParam::Lifetime(param) => Some(&param.lifetime),
+                _ => None,
             })
-            .cloned()
+            .cloned(),
     );
 
-    let params = generics.params.iter()
+    let params = generics
+        .params
+        .iter()
         .cloned()
         .chain(Some(GenericParam::Lifetime(def)))
         .collect();

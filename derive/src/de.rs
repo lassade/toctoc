@@ -251,7 +251,7 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<
                                 Ok(())
                             }
                         }
-                    
+
                         let mut __value = None;
                         __m.visit(__Inner::begin(&mut __value), __c)?;
                         let __value = __value.unwrap();
@@ -288,7 +288,7 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<
 
     // Only create a map visitor if the enum hahs struct and tuple variants
     let map = if arm.len() > 0 {
-        Some(quote!{
+        Some(quote! {
             fn map(&mut self, __m: &mut dyn __crate::de::Map<'de>, __c: &mut dyn __crate::de::Context) -> __crate::Result<()> {
                 match __m.next()? {
                     #( #arm, )*
@@ -310,7 +310,7 @@ pub fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<
 
     // Only create a string visitor if the enum has unit variants
     let string = if unit_variant.len() > 0 {
-        Some(quote!{
+        Some(quote! {
             fn string(&mut self, s: &'de __crate::export::str, _: &mut dyn __crate::de::Context) -> __crate::Result<()> {
                 let value = match s {
                     #( #unit_variant_name => #ident::#unit_variant, )*

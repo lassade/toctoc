@@ -12,15 +12,33 @@ mod help {
     pub type Usize = usize;
 }
 
+/// Context hint to help decide which `Entity` or `Asset` return
 pub enum Hint<'a> {
+    /// Null or default asset or entity
     Null,
+    /// Stable index number
     Number(u64),
+    /// May contain: path, name, formatted guid or inlined json data
     Str(&'a str),
+    /// May contain: guid or inlined bson data
     Bytes(&'a [u8]),
 }
 
-pub type Asset = (std::sync::Arc<u32>, std::any::TypeId, u32);
-pub type Entity = (u32, u32);
+/// Implementation independent asset handle
+pub enum AssetHandle<T> {
+    Atomic(std::sync::Arc<T>),
+    RefCounted(std::rc::Rc<T>),
+    Plain(T),
+}
+
+/// Asset handle with type information
+pub struct Asset {
+    pub handle: AssetHandle<u32>,
+    pub id: (std::any::TypeId, u32),
+}
+
+/// Entity type, should be compatible with most ecs crates
+pub struct Entity(pub u64);
 
 /// Hex conversion utility
 pub use bintext::hex;

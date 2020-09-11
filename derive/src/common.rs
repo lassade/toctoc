@@ -66,9 +66,9 @@ pub struct ToctocFieldOptions {
     /// or specify any default function with `#[toctoc(default = "path::to::default_function")`
     pub skip: bool,
     /// Skip deserialization require a default value
-    pub no_de: bool,
+    pub skip_deserializing: bool,
     /// Skip serialization
-    pub no_ser: bool,
+    pub skip_serializing: bool,
     /// Use the default implementation when this field is missing.
     ///
     /// It's also possible to specify a function to create the default value like so:

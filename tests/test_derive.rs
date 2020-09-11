@@ -1,10 +1,23 @@
 use toctoc::{json, Deserialize, Serialize};
 
+#[allow(dead_code)]
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 enum Tag {
     A,
     #[toctoc(rename = "renamedB")]
     B,
+    C(i32),
+    D(i32, i32),
+    E {
+        #[toctoc(skip_deserializing)]
+        a: i32,
+        #[toctoc(skip_serializing, rename = "bb")]
+        b: i32,
+    },
+    #[toctoc(skip)]
+    F {
+        a: i32,
+    },
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]

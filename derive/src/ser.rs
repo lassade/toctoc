@@ -24,7 +24,7 @@ fn derive_struct(input: &DeriveInput, fields: &Fields) -> DeriveResult<TokenStre
             for f in &fields.named {
                 let opt = ToctocFieldOptions::from_field(f).map_err(|err| err.write_errors())?;
 
-                if opt.skip || opt.no_ser {
+                if opt.skip || opt.skip_serializing {
                     continue;
                 }
 
@@ -121,7 +121,7 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
                     let opt =
                         ToctocFieldOptions::from_field(f).map_err(|err| err.write_errors())?;
 
-                    if opt.skip || opt.no_ser {
+                    if opt.skip || opt.skip_serializing {
                         // Some fields are skipped so add the `..` at the end of the match arm
                         if dot2.is_none() {
                             dot2 = Some(syn::token::Dot2::default());
@@ -130,9 +130,8 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
                         continue;
                     }
 
-                    let ident = opt.name().unwrap();
-                    field.push(ident.clone());
-                    field_name.push(ident.to_string());
+                    field.push(opt.ident.clone());
+                    field_name.push(opt.name().unwrap().to_string());
 
                     match &f.ty {
                         Type::Reference(r) => {
@@ -200,6 +199,7 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
                 fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {
                     match self {
                         #(#arm,)*
+                        _ => v.null(),
                     }
                 }
             }

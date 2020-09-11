@@ -8,8 +8,8 @@ fn default_path() -> syn::Path {
     syn::parse_str("Default::default").unwrap()
 }
 
-pub fn make_ident<D: std::fmt::Display>(posfix: D) -> syn::Ident {
-    let field = format!("_{}", posfix);
+pub fn make_ident<D: std::fmt::Display>(postfix: D) -> syn::Ident {
+    let field = format!("_{}", postfix);
     syn::Ident::new(&field, proc_macro2::Span::call_site())
 }
 
@@ -22,15 +22,15 @@ pub fn make_literal_int(i: usize) -> syn::LitInt {
 #[darling(attributes(toctoc))]
 pub struct ToctocOptions {
     pub ident: syn::Ident,
-    /// Use the default to fill out any missing field from this `struct`.
-    ///
-    /// It's also possible to specify a function to create the default value like so:
-    /// `#[toctoc(default = "path::to::default_function")`
-    ///
-    /// **Note** Beware `enums` aren't suported because they can just swap variants while loading
-    /// thus invalidanting all the defaults
-    #[darling(default)]
-    pub default: Option<Override<syn::Path>>,
+    // /// Use the default to fill out any missing field from this `struct`.
+    // ///
+    // /// It's also possible to specify a function to create the default value like so:
+    // /// `#[toctoc(default = "path::to::default_function")`
+    // ///
+    // /// **Note** Beware `enums` aren't suported because they can just swap variants while loading
+    // /// thus invalidating all the defaults
+    // #[darling(default)]
+    // pub default: Option<Override<syn::Path>>,
     /// Specify a path to the toctoc crate instance to use when referring to toctoc APIs
     /// from generated code. This is normally only applicable when invoking re-exported
     /// toctoc derives from a public macro in a different crate.
@@ -45,15 +45,15 @@ impl ToctocOptions {
             .map_or_else(|| syn::parse_str("toctoc").unwrap(), |p| p.clone())
     }
 
-    /// Returns the default behavior
-    pub fn default_behaviour(&self) -> Option<syn::Path> {
-        use Override::*;
-        match &self.default {
-            Some(Explicit(path)) => Some(path.clone()),
-            Some(Inherit) => Some(default_path()),
-            None => None,
-        }
-    }
+    // /// Returns the default behavior
+    // pub fn default_behaviour(&self) -> Option<syn::Path> {
+    //     use Override::*;
+    //     match &self.default {
+    //         Some(Explicit(path)) => Some(path.clone()),
+    //         Some(Inherit) => Some(default_path()),
+    //         None => None,
+    //     }
+    // }
 }
 
 #[derive(Default, FromField)]
@@ -98,8 +98,8 @@ impl ToctocFieldOptions {
         }
     }
 
-    /// Returns the default behaviour
-    pub fn default_behaviour(&self) -> Option<syn::Path> {
+    /// Returns the default behavior
+    pub fn default_behavior(&self) -> Option<syn::Path> {
         use Override::*;
         match &self.default {
             Some(Explicit(path)) => Some(path.clone()),
@@ -108,8 +108,8 @@ impl ToctocFieldOptions {
         }
     }
 
-    /// Returns the default behaviour foced on, used when the field is skipped
-    pub fn default_behaviour_forced(&self) -> syn::Path {
+    /// Returns the default behavior forced on, used when the field is skipped
+    pub fn default_behavior_forced(&self) -> syn::Path {
         use Override::*;
         match &self.default {
             Some(Explicit(path)) => path.clone(),
@@ -146,12 +146,11 @@ impl Default for ToctocVariantOptions {
 }
 
 impl ToctocVariantOptions {
-    /// Field name
-    pub fn name(&self) -> Option<&syn::Ident> {
-        if self.rename.is_some() {
-            self.rename.as_ref()
+    pub fn name(&self) -> &syn::Ident {
+        if let Some(name) = self.rename.as_ref() {
+            name
         } else {
-            Some(&self.ident)
+            &self.ident
         }
     }
 }

@@ -3,9 +3,9 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{parse_quote, Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Type};
 
+use crate::bound;
 use crate::common::*;
 use crate::DeriveResult;
-use crate::{attr, bound};
 
 pub fn derive(input: DeriveInput) -> DeriveResult<TokenStream> {
     match &input.data {
@@ -40,16 +40,16 @@ fn derive_struct(input: &DeriveInput, fields: &Fields) -> DeriveResult<TokenStre
             }
         }
         Fields::Unnamed(fields) => {
-            let (field_name, field): (Vec<_>, Vec<_>) = fields
+            let field: Vec<_> = fields
                 .unnamed
                 .iter()
                 .enumerate()
-                .map(|(i, _)| (i.to_string(), make_literal_int(i)))
-                .unzip();
+                .map(|(i, _)| make_literal_int(i))
+                .collect();
 
             quote! {
-                v.map()
-                #(.field(#field_name, &self.#field, c))*
+                v.seq()
+                #(.element(&self.#field, c))*
                 .done()
             }
         }
@@ -106,8 +106,9 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
             continue;
         }
 
+        let mut dot2 = None;
         let variant = &opt.ident;
-        let name = opt.name().unwrap().to_string();
+        let name = opt.name().to_string();
 
         match &v.fields {
             Fields::Named(fields) => {
@@ -121,6 +122,11 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
                         ToctocFieldOptions::from_field(f).map_err(|err| err.write_errors())?;
 
                     if opt.skip || opt.no_ser {
+                        // Some fields are skipped so add the `..` at the end of the match arm
+                        if dot2.is_none() {
+                            dot2 = Some(syn::token::Dot2::default());
+                        }
+
                         continue;
                     }
 
@@ -141,7 +147,7 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
                 }
 
                 arm.push(quote! {
-                    #ident::#variant { #(#field,)* } => {
+                    #ident::#variant { #(#field,)* #dot2 } => {
                         struct __Inner #inner_impl_generics {
                             #( #field: &'a #field_ty, )*
                         }

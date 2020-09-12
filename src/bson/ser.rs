@@ -1,5 +1,5 @@
 use crate::buffer::Buffer;
-use crate::ser::{Context, Serialize, Serializer, SerializerMap, SerializerSeq};
+use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, Serializer, VisitorTrait};
 
 /// Serialize any serializable type into a BSON byte vec.
 ///
@@ -29,7 +29,7 @@ pub fn to_bin<T: ?Sized + Serialize>(value: &T, context: &dyn Context) -> Vec<u8
     bson.done()
 }
 
-struct BsonSer<'a> {
+pub struct BsonSer<'a> {
     buffer: Buffer,
     doc: Vec<usize>,
     field: Option<&'a str>,
@@ -38,7 +38,7 @@ struct BsonSer<'a> {
 }
 
 impl<'a> BsonSer<'a> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut bson = Self {
             buffer: Buffer::new(),
             doc: vec![],
@@ -96,6 +96,13 @@ impl<'a> BsonSer<'a> {
 }
 
 impl<'a> Serializer for BsonSer<'a> {
+    fn serialize(mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
+        s.begin((&mut self).into(), c);
+        Return::Binary(self.done())
+    }
+}
+
+impl<'a> VisitorTrait for BsonSer<'a> {
     fn null(&mut self) {
         self.element(0x0A);
     }
@@ -186,20 +193,20 @@ impl<'a> Serializer for BsonSer<'a> {
         }
     }
 
-    fn seq(&mut self) -> &mut dyn SerializerSeq {
+    fn seq(&mut self) -> &mut dyn SeqTrait {
         self.element(0x04);
         self.begin_doc();
         self
     }
 
-    fn map(&mut self) -> &mut dyn SerializerMap {
+    fn map(&mut self) -> &mut dyn MapTrait {
         self.element(0x03);
         self.begin_doc();
         self
     }
 }
 
-impl<'a> SerializerSeq for BsonSer<'a> {
+impl<'a> SeqTrait for BsonSer<'a> {
     fn element(&mut self, s: &dyn Serialize, c: &dyn Context) {
         s.begin(self.into(), c);
     }
@@ -209,7 +216,7 @@ impl<'a> SerializerSeq for BsonSer<'a> {
     }
 }
 
-impl<'a> SerializerMap for BsonSer<'a> {
+impl<'a> MapTrait for BsonSer<'a> {
     fn field(&mut self, f: &str, s: &dyn Serialize, c: &dyn Context) {
         // ? NOTE: We can assume that it will only be used inside this function scope
         self.field = Some(unsafe { std::mem::transmute(f) });

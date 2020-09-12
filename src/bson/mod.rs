@@ -16,9 +16,11 @@
 
 mod ser;
 pub use self::ser::to_bin;
+pub use self::ser::BsonSer;
 
 mod de;
 pub use self::de::from_bin;
+pub use self::de::BsonDe;
 
 mod owned;
 pub use self::owned::{from_bin_owned, Owned};

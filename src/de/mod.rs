@@ -165,6 +165,10 @@ pub trait Deserialize<'de>: Sized {
         None
     }
 }
+/// A data format that can deserialize any data structure supported by Toctoc.
+pub trait Deserializer<'de> {
+    fn deserialize(self, value: &mut dyn Visitor<'de>, context: &mut dyn Context) -> Result<()>;
+}
 
 // * MOD Added some optional context to certain types of objects
 /// Trait that can write data into an output place.

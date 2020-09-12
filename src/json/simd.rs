@@ -1,6 +1,6 @@
 use std::mem;
 
-use crate::de::{Context, Deserialize, Map, Seq, Visitor};
+use crate::de::{Context, Deserialize, Deserializer, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 use simd_json::{Node, StaticNode};
 
@@ -31,13 +31,13 @@ pub fn from_str<'de, T: Deserialize<'de>>(json: &'de mut str, ctx: &mut dyn Cont
     out.ok_or_else(Error::unknown)
 }
 
-struct JsonDe<'de> {
+pub struct JsonDe<'de> {
     index: usize,
     tape: Vec<Node<'de>>,
 }
 
 impl<'de> JsonDe<'de> {
-    fn new(json: &'de mut str) -> Result<Self> {
+    pub fn new(json: &'de mut str) -> Result<Self> {
         Ok(Self {
             index: 1, // First node is always of type `Static(Null)`,
             tape: simd_json::to_tape(unsafe { json.as_bytes_mut() })
@@ -134,5 +134,11 @@ impl<'de> Iterator for JsonDe<'de> {
         let v = self.tape.get(self.index).cloned();
         self.index += 1;
         v
+    }
+}
+
+impl<'de> Deserializer<'de> for JsonDe<'de> {
+    fn deserialize(mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+        self.visit(v, c)
     }
 }

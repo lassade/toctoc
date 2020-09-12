@@ -5,11 +5,26 @@
 
 mod ser;
 pub use self::ser::to_string;
+pub use ser::JsonSer;
+
+pub use export::*;
 
 #[cfg(not(feature = "simd"))]
 mod de;
+
 #[cfg(not(feature = "simd"))]
-pub use self::de::from_str;
+mod export {
+    pub use super::de::from_str;
+}
+
+#[cfg(feature = "simd")]
+mod simd;
+
+#[cfg(feature = "simd")]
+mod export {
+    pub use super::simd::from_str;
+    pub use super::simd::JsonDe;
+}
 
 mod value;
 pub use self::value::Value;
@@ -24,11 +39,6 @@ mod object;
 pub use self::object::Object;
 
 mod drop;
-
-#[cfg(feature = "simd")]
-mod simd;
-#[cfg(feature = "simd")]
-pub use simd::from_str;
 
 mod owned;
 pub use self::owned::{from_str_owned, Owned};

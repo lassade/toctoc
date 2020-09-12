@@ -72,16 +72,26 @@ pub trait Serialize {
     fn begin(&self, v: Visitor, context: &dyn Context) -> Done;
 }
 
+pub enum Return {
+    Text(String),
+    Binary(Vec<u8>),
+}
+
+/// Trait for data format that can serialize any data structure supported by Toctoc.
+pub trait Serializer {
+    fn serialize(self, value: &dyn Serialize, context: &dyn Context) -> Return;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 pub struct Done(());
 
 /// Safe interface to proper call `Ser` functions
 pub struct Visitor<'a> {
-    s: &'a mut dyn Serializer,
+    s: &'a mut dyn VisitorTrait,
 }
 
-impl<'a, S: Serializer> From<&'a mut S> for Visitor<'a> {
+impl<'a, S: VisitorTrait> From<&'a mut S> for Visitor<'a> {
     #[inline(always)]
     fn from(s: &'a mut S) -> Self {
         Visitor { s }
@@ -174,7 +184,7 @@ impl<'a> Visitor<'a> {
 
 /// Safe interface to proper call `SerializeSeq` functions
 pub struct Seq<'a> {
-    s: &'a mut dyn SerializerSeq,
+    s: &'a mut dyn SeqTrait,
 }
 
 impl<'a> Seq<'a> {
@@ -193,7 +203,7 @@ impl<'a> Seq<'a> {
 
 /// Safe interface to proper call `SerializeSeq` functions
 pub struct Map<'a> {
-    m: &'a mut dyn SerializerMap,
+    m: &'a mut dyn MapTrait,
 }
 
 impl<'a> Map<'a> {
@@ -212,7 +222,7 @@ impl<'a> Map<'a> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-pub trait Serializer {
+pub trait VisitorTrait {
     fn null(&mut self);
 
     fn boolean(&mut self, b: bool);
@@ -245,17 +255,17 @@ pub trait Serializer {
 
     fn bytes(&mut self, b: &[u8], align: usize);
 
-    fn seq(&mut self) -> &mut dyn SerializerSeq;
+    fn seq(&mut self) -> &mut dyn SeqTrait;
 
-    fn map(&mut self) -> &mut dyn SerializerMap;
+    fn map(&mut self) -> &mut dyn MapTrait;
 }
 
-pub trait SerializerSeq {
+pub trait SeqTrait {
     fn element(&mut self, s: &dyn Serialize, c: &dyn Context);
     fn done(&mut self);
 }
 
-pub trait SerializerMap {
+pub trait MapTrait {
     fn field(&mut self, k: &str, s: &dyn Serialize, c: &dyn Context);
     fn done(&mut self);
 }

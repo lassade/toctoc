@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 use std::str;
 
 use crate::bytes::guess_align_of;
-use crate::de::{Context, Deserialize, Map, Seq, Visitor};
+use crate::de::{Context, Deserialize, Deserializer, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 
 /// Deserialize a BSON byte slice into any deserializable type.
@@ -33,13 +33,11 @@ use crate::error::{Error, Result};
 /// ```
 pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
-    let mut de = BsonDe::new(b);
-    de.deserialize(T::begin(&mut out), ctx)
-        .map_err(|e| e.append_line_and_column(0, de.index))?;
+    BsonDe::new(b).deserialize(T::begin(&mut out), ctx)?;
     out.ok_or_else(Error::unknown)
 }
 
-struct BsonDe<'de> {
+pub struct BsonDe<'de> {
     /// Remaining buffer slice
     buffer: &'de [u8],
     /// Buffer alignment (useful for handling errors)
@@ -69,7 +67,7 @@ macro_rules! read_byte_impl {
 /// Provides various functions to read bytes from the inner buffer
 /// and interpreting as little endian bytes many primitive types
 impl<'de> BsonDe<'de> {
-    fn new(buffer: &'de [u8]) -> Self {
+    pub fn new(buffer: &'de [u8]) -> Self {
         Self {
             buffer,
             index: 0,
@@ -79,7 +77,8 @@ impl<'de> BsonDe<'de> {
         }
     }
 
-    fn deserialize(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+    /// Begin deserialization
+    fn begin(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
         // Root document size
         self.read_u32()? as usize;
 
@@ -298,5 +297,12 @@ impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
 
     fn visit(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
         self.de.visit(v, c)
+    }
+}
+
+impl<'de> Deserializer<'de> for BsonDe<'de> {
+    fn deserialize(mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+        self.begin(v, c)
+            .map_err(|e| e.append_line_and_column(0, self.index))
     }
 }

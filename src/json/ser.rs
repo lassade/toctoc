@@ -1,4 +1,4 @@
-use crate::ser::{Context, Serialize, Serializer, SerializerMap, SerializerSeq};
+use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, Serializer, VisitorTrait};
 
 /// Serialize any serializable type into a JSON string.
 ///
@@ -22,16 +22,20 @@ use crate::ser::{Context, Serialize, Serializer, SerializerMap, SerializerSeq};
 /// }
 /// ```
 pub fn to_string<T: ?Sized + Serialize>(value: &T, context: &dyn Context) -> String {
-    let mut json = JsonSer { out: vec![] };
+    let mut json = JsonSer::new();
     value.begin((&mut json).into(), context);
     json.done()
 }
 
-struct JsonSer {
+pub struct JsonSer {
     out: Vec<u8>,
 }
 
 impl JsonSer {
+    pub fn new() -> Self {
+        Self { out: vec![] }
+    }
+
     #[inline]
     fn push(&mut self, c: u8) {
         self.out.push(c)
@@ -101,6 +105,13 @@ impl JsonSer {
 }
 
 impl Serializer for JsonSer {
+    fn serialize(mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
+        s.begin((&mut self).into(), c);
+        Return::Text(self.done())
+    }
+}
+
+impl VisitorTrait for JsonSer {
     fn null(&mut self) {
         self.push_str("null");
     }
@@ -129,12 +140,12 @@ impl Serializer for JsonSer {
         }
     }
 
-    fn seq(&mut self) -> &mut dyn SerializerSeq {
+    fn seq(&mut self) -> &mut dyn SeqTrait {
         self.push(b'[');
         self
     }
 
-    fn map(&mut self) -> &mut dyn SerializerMap {
+    fn map(&mut self) -> &mut dyn MapTrait {
         self.push(b'{');
         self
     }
@@ -158,7 +169,7 @@ impl Serializer for JsonSer {
     }
 }
 
-impl SerializerSeq for JsonSer {
+impl SeqTrait for JsonSer {
     fn element(&mut self, s: &dyn Serialize, c: &dyn Context) {
         s.begin(self.into(), c);
         self.push(b',');
@@ -172,7 +183,7 @@ impl SerializerSeq for JsonSer {
     }
 }
 
-impl SerializerMap for JsonSer {
+impl MapTrait for JsonSer {
     fn field(&mut self, f: &str, s: &dyn Serialize, c: &dyn Context) {
         self.push(b'\"');
         self.push_str(f);

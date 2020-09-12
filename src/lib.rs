@@ -169,9 +169,13 @@ pub mod ser;
 
 #[doc(inline)]
 pub use crate::de::Deserialize;
+#[doc(inline)]
+pub use crate::de::Deserializer;
 pub use crate::error::{Error, Result};
 #[doc(inline)]
 pub use crate::ser::Serialize;
+#[doc(inline)]
+pub use crate::ser::Serializer;
 
 make_place!(Place);
 

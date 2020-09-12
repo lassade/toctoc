@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 use std::str;
 
 use crate::bytes::guess_align_of;
-use crate::de::{Context, Deserialize, Deserializer, Map, Seq, Visitor};
+use crate::de::{Context, Deserialize, DeserializerTrait, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 
 /// Deserialize a BSON byte slice into any deserializable type.
@@ -300,8 +300,8 @@ impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
     }
 }
 
-impl<'de> Deserializer<'de> for BsonDe<'de> {
-    fn deserialize(mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+impl<'de> DeserializerTrait<'de> for BsonDe<'de> {
+    fn deserialize(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
         self.begin(v, c)
             .map_err(|e| e.append_line_and_column(0, self.index))
     }

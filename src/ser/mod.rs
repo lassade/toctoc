@@ -72,14 +72,30 @@ pub trait Serialize {
     fn begin(&self, v: Visitor, context: &dyn Context) -> Done;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+pub struct Serializer<'a>(&'a mut dyn SerializerTrait);
+
+impl<'a> Serializer<'a> {
+    pub fn serialize(self, value: &dyn Serialize, context: &dyn Context) -> Return {
+        self.0.serialize(value, context)
+    }
+}
+
+impl<'a, D: SerializerTrait> From<&'a mut D> for Serializer<'a> {
+    fn from(d: &'a mut D) -> Self {
+        Self(d)
+    }
+}
+
 pub enum Return {
     Text(String),
     Binary(Vec<u8>),
 }
 
 /// Trait for data format that can serialize any data structure supported by Toctoc.
-pub trait Serializer {
-    fn serialize(self, value: &dyn Serialize, context: &dyn Context) -> Return;
+pub trait SerializerTrait {
+    fn serialize(&mut self, value: &dyn Serialize, context: &dyn Context) -> Return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

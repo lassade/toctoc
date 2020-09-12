@@ -1,6 +1,6 @@
 use std::mem;
 
-use crate::de::{Context, Deserialize, Deserializer, Map, Seq, Visitor};
+use crate::de::{Context, Deserialize, DeserializerTrait, Map, Seq, Visitor};
 use crate::error::{Error, Result};
 use simd_json::{Node, StaticNode};
 
@@ -137,8 +137,8 @@ impl<'de> Iterator for JsonDe<'de> {
     }
 }
 
-impl<'de> Deserializer<'de> for JsonDe<'de> {
-    fn deserialize(mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
+impl<'de> DeserializerTrait<'de> for JsonDe<'de> {
+    fn deserialize(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
         self.visit(v, c)
     }
 }

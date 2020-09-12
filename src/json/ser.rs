@@ -1,4 +1,4 @@
-use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, Serializer, VisitorTrait};
+use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, SerializerTrait, VisitorTrait};
 
 /// Serialize any serializable type into a JSON string.
 ///
@@ -21,10 +21,12 @@ use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, Serializer, Vis
 ///     println!("{}", j);
 /// }
 /// ```
-pub fn to_string<T: ?Sized + Serialize>(value: &T, context: &dyn Context) -> String {
+pub fn to_string<T: Serialize>(value: &T, context: &dyn Context) -> String {
     let mut json = JsonSer::new();
-    value.begin((&mut json).into(), context);
-    json.done()
+    match json.serialize(value, context) {
+        Return::Text(t) => t,
+        _ => unreachable!(),
+    }
 }
 
 pub struct JsonSer {
@@ -98,16 +100,14 @@ impl JsonSer {
             self.out.set_len(i)
         }
     }
-
-    fn done(self) -> String {
-        unsafe { String::from_utf8_unchecked(self.out) }
-    }
 }
 
-impl Serializer for JsonSer {
-    fn serialize(mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
-        s.begin((&mut self).into(), c);
-        Return::Text(self.done())
+impl SerializerTrait for JsonSer {
+    fn serialize(&mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
+        s.begin(self.into(), c);
+        let mut v = vec![];
+        std::mem::swap(&mut self.out, &mut v);
+        Return::Text(unsafe { String::from_utf8_unchecked(v) })
     }
 }
 

@@ -165,9 +165,32 @@ pub trait Deserialize<'de>: Sized {
         None
     }
 }
+
+pub struct Deserializer<'a, 'de>(&'a mut dyn DeserializerTrait<'de>);
+
+impl<'a, 'de> Deserializer<'a, 'de> {
+    pub fn deserialize(
+        self,
+        value: &mut dyn Visitor<'de>,
+        context: &mut dyn Context,
+    ) -> Result<()> {
+        self.0.deserialize(value, context)
+    }
+}
+
+impl<'a, 'de, D: DeserializerTrait<'de>> From<&'a mut D> for Deserializer<'a, 'de> {
+    fn from(d: &'a mut D) -> Self {
+        Self(d)
+    }
+}
+
 /// A data format that can deserialize any data structure supported by Toctoc.
-pub trait Deserializer<'de> {
-    fn deserialize(self, value: &mut dyn Visitor<'de>, context: &mut dyn Context) -> Result<()>;
+pub trait DeserializerTrait<'de> {
+    fn deserialize(
+        &mut self,
+        value: &mut dyn Visitor<'de>,
+        context: &mut dyn Context,
+    ) -> Result<()>;
 }
 
 // * MOD Added some optional context to certain types of objects

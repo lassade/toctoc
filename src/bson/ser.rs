@@ -1,5 +1,5 @@
 use crate::buffer::Buffer;
-use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, Serializer, VisitorTrait};
+use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, SerializerTrait, VisitorTrait};
 
 /// Serialize any serializable type into a BSON byte vec.
 ///
@@ -23,10 +23,12 @@ use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, Serializer, Vis
 ///     println!("{}", hex::encode(&b));
 /// }
 /// ```
-pub fn to_bin<T: ?Sized + Serialize>(value: &T, context: &dyn Context) -> Vec<u8> {
+pub fn to_bin<T: Serialize>(value: &T, context: &dyn Context) -> Vec<u8> {
     let mut bson = BsonSer::new();
-    value.begin((&mut bson).into(), context);
-    bson.done()
+    match bson.serialize(value, context) {
+        Return::Text(_) => unreachable!(),
+        Return::Binary(b) => b,
+    }
 }
 
 pub struct BsonSer<'a> {
@@ -35,6 +37,7 @@ pub struct BsonSer<'a> {
     field: Option<&'a str>,
     /// Alignment field metadata
     align: usize,
+    dirty: bool,
 }
 
 impl<'a> BsonSer<'a> {
@@ -44,6 +47,7 @@ impl<'a> BsonSer<'a> {
             doc: vec![],
             field: None,
             align: Buffer::ALIGNMENT, // Default alignment
+            dirty: false,
         };
 
         // Root document
@@ -57,11 +61,6 @@ impl<'a> BsonSer<'a> {
         }
 
         bson
-    }
-
-    fn done(mut self) -> Vec<u8> {
-        self.end_doc(); // End root level document
-        self.buffer.to_vec()
     }
 
     fn element(&mut self, ty: u8) -> usize {
@@ -95,10 +94,23 @@ impl<'a> BsonSer<'a> {
     }
 }
 
-impl<'a> Serializer for BsonSer<'a> {
-    fn serialize(mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
-        s.begin((&mut self).into(), c);
-        Return::Binary(self.done())
+impl<'a> SerializerTrait for BsonSer<'a> {
+    fn serialize(&mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
+        // Clean up
+        // ? NOTE: This is needed because the bson needs to be decorated with a root document
+        if self.dirty {
+            let mut s = Self::new();
+            std::mem::swap(self, &mut s);
+        }
+
+        s.begin(self.into(), c);
+        self.end_doc(); // End root level document
+        self.dirty = true; // Needs a clean up before reuse!
+
+        let mut b = Buffer::new();
+        std::mem::swap(&mut self.buffer, &mut b);
+
+        Return::Binary(b.to_vec())
     }
 }
 

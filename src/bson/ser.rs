@@ -19,11 +19,11 @@ use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, SerializerTrait
 ///         message: "reminiscent of Serde".to_owned(),
 ///     };
 ///
-///     let b = bson::to_bin(&example, &());
+///     let b = bson::to_bin(&example, &mut ());
 ///     println!("{}", hex::encode(&b));
 /// }
 /// ```
-pub fn to_bin<T: Serialize>(value: &T, context: &dyn Context) -> Vec<u8> {
+pub fn to_bin<T: Serialize>(value: &T, context: &mut dyn Context) -> Vec<u8> {
     let mut bson = BsonSer::new();
     match bson.serialize(value, context) {
         Return::Text(_) => unreachable!(),
@@ -95,7 +95,7 @@ impl<'a> BsonSer<'a> {
 }
 
 impl<'a> SerializerTrait for BsonSer<'a> {
-    fn serialize(&mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
+    fn serialize(&mut self, s: &dyn Serialize, c: &mut dyn Context) -> Return {
         // Clean up
         // ? NOTE: This is needed because the bson needs to be decorated with a root document
         if self.dirty {
@@ -219,7 +219,7 @@ impl<'a> VisitorTrait for BsonSer<'a> {
 }
 
 impl<'a> SeqTrait for BsonSer<'a> {
-    fn element(&mut self, s: &dyn Serialize, c: &dyn Context) {
+    fn element(&mut self, s: &dyn Serialize, c: &mut dyn Context) {
         s.begin(self.into(), c);
     }
 
@@ -229,7 +229,7 @@ impl<'a> SeqTrait for BsonSer<'a> {
 }
 
 impl<'a> MapTrait for BsonSer<'a> {
-    fn field(&mut self, f: &str, s: &dyn Serialize, c: &dyn Context) {
+    fn field(&mut self, f: &str, s: &dyn Serialize, c: &mut dyn Context) {
         // ? NOTE: We can assume that it will only be used inside this function scope
         self.field = Some(unsafe { std::mem::transmute(f) });
         s.begin(self.into(), c);

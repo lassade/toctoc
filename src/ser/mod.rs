@@ -12,7 +12,7 @@
 //! struct MyBoolean(bool);
 //!
 //! impl Serialize for MyBoolean {
-//!     fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+//!     fn begin(&self, v: Visitor, _: &mut dyn Context) -> Done {
 //!         v.boolean(self.0)
 //!     }
 //! }
@@ -27,7 +27,7 @@
 //! struct MyVec<T>(Vec<T>);
 //!
 //! impl<T: Serialize> Serialize for MyVec<T> {
-//!     fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+//!     fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
 //!        let mut seq = v.seq();
 //!        for e in &self.0 {
 //!            seq = seq.element(e, context);
@@ -52,7 +52,7 @@
 //! }
 //!
 //! impl Serialize for Demo {
-//!     fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+//!     fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
 //!         v.map()
 //!             .field("code", &self.code, context)
 //!             .field("message", &self.message, context)
@@ -69,7 +69,7 @@ use crate::export::{Asset, Entity};
 ///
 /// [Refer to the module documentation for examples.][::ser]
 pub trait Serialize {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done;
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -77,7 +77,7 @@ pub trait Serialize {
 pub struct Serializer<'a>(&'a mut dyn SerializerTrait);
 
 impl<'a> Serializer<'a> {
-    pub fn serialize(self, value: &dyn Serialize, context: &dyn Context) -> Return {
+    pub fn serialize(self, value: &dyn Serialize, context: &mut dyn Context) -> Return {
         self.0.serialize(value, context)
     }
 }
@@ -95,7 +95,7 @@ pub enum Return {
 
 /// Trait for data format that can serialize any data structure supported by Toctoc.
 pub trait SerializerTrait {
-    fn serialize(&mut self, value: &dyn Serialize, context: &dyn Context) -> Return;
+    fn serialize(&mut self, value: &dyn Serialize, context: &mut dyn Context) -> Return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -205,7 +205,7 @@ pub struct Seq<'a> {
 
 impl<'a> Seq<'a> {
     #[inline(always)]
-    pub fn element(self, s: &dyn Serialize, c: &dyn Context) -> Self {
+    pub fn element(self, s: &dyn Serialize, c: &mut dyn Context) -> Self {
         self.s.element(s, c);
         self
     }
@@ -224,7 +224,7 @@ pub struct Map<'a> {
 
 impl<'a> Map<'a> {
     #[inline(always)]
-    pub fn field(self, k: &str, s: &dyn Serialize, c: &dyn Context) -> Self {
+    pub fn field(self, k: &str, s: &dyn Serialize, c: &mut dyn Context) -> Self {
         self.m.field(k, s, c);
         self
     }
@@ -277,12 +277,12 @@ pub trait VisitorTrait {
 }
 
 pub trait SeqTrait {
-    fn element(&mut self, s: &dyn Serialize, c: &dyn Context);
+    fn element(&mut self, s: &dyn Serialize, c: &mut dyn Context);
     fn done(&mut self);
 }
 
 pub trait MapTrait {
-    fn field(&mut self, k: &str, s: &dyn Serialize, c: &dyn Context);
+    fn field(&mut self, k: &str, s: &dyn Serialize, c: &mut dyn Context);
     fn done(&mut self);
 }
 

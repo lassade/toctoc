@@ -29,7 +29,7 @@ fn test_bson_struct() {
         int: 5,
     };
 
-    let bin = toctoc::bson::to_bin(&v, &());
+    let bin = toctoc::bson::to_bin(&v, &mut ());
 
     let mut ground = vec![];
     bson::to_bson(&Primitive { val: v.clone() })
@@ -52,7 +52,7 @@ fn test_bson_struct() {
 
 macro_rules! test_primitive {
     ($p:expr, $t:ty) => {{
-        let bin = toctoc::bson::to_bin(&$p, &());
+        let bin = toctoc::bson::to_bin(&$p, &mut ());
 
         let mut ground = vec![];
         let mut doc = bson::Document::new();
@@ -86,7 +86,7 @@ fn bson_zero_copy() {
     let m0 = MeshReadOnly {
         verts: Bytes::new(&[[0xAA55AA55, 0], [0, 0], [0, 0], [0, 0]][..]),
     };
-    let bson = toctoc::bson::to_bin(&m0, &());
+    let bson = toctoc::bson::to_bin(&m0, &mut ());
     assert_eq!(bson.as_ptr().align_offset(4), 0);
     let m1: MeshReadOnly = toctoc::bson::from_bin(&bson, &mut ()).unwrap();
     assert_eq!(m0, m1);

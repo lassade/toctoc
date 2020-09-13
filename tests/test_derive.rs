@@ -61,7 +61,7 @@ fn test_ser() {
             z: None,
         },
     };
-    let actual = json::to_string(&example, &());
+    let actual = json::to_string(&example, &mut ());
     let expected = r#"{"x":"X","t1":"A","t2":"renamedB","n":{"y":["Y","Y"],"z":null}}"#;
     assert_eq!(actual, expected);
 }

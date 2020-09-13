@@ -5,25 +5,25 @@ use std::hash::{BuildHasher, Hash};
 use crate::ser::{Context, Done, Serialize, Visitor};
 
 impl Serialize for () {
-    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, _: &mut dyn Context) -> Done {
         v.null()
     }
 }
 
 impl Serialize for bool {
-    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, _: &mut dyn Context) -> Done {
         v.boolean(*self)
     }
 }
 
 impl Serialize for str {
-    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, _: &mut dyn Context) -> Done {
         v.string(self)
     }
 }
 
 impl Serialize for String {
-    fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, _: &mut dyn Context) -> Done {
         v.string(self)
     }
 }
@@ -31,7 +31,7 @@ impl Serialize for String {
 macro_rules! primitive {
     ($ty:ident, $method:ident, $cast:ident) => {
         impl Serialize for $ty {
-            fn begin(&self, v: Visitor, _: &dyn Context) -> Done {
+            fn begin(&self, v: Visitor, _: &mut dyn Context) -> Done {
                 v.$method(*self as $cast)
             }
         }
@@ -52,19 +52,19 @@ primitive!(f32, single, f32);
 primitive!(f64, double, f64);
 
 impl<'a, T: ?Sized + Serialize> Serialize for &'a T {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         (**self).begin(v, context)
     }
 }
 
 impl<T: ?Sized + Serialize> Serialize for Box<T> {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         (**self).begin(v, context)
     }
 }
 
 impl<T: Serialize> Serialize for Option<T> {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         match self {
             Some(some) => some.begin(v, context),
             None => v.null(),
@@ -73,7 +73,7 @@ impl<T: Serialize> Serialize for Option<T> {
 }
 
 impl<'a, T: ?Sized + ToOwned + Serialize> Serialize for Cow<'a, T> {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         (**self).begin(v, context)
     }
 }
@@ -81,7 +81,7 @@ impl<'a, T: ?Sized + ToOwned + Serialize> Serialize for Cow<'a, T> {
 macro_rules! arrays {
     ($($n:tt),*) => { $(
         impl<T: Serialize> Serialize for [T; $n] {
-            fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+            fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
                 self[..].begin(v, context)
             }
         }
@@ -95,7 +95,7 @@ arrays!(
 );
 
 impl<A: Serialize> Serialize for (A,) {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         self.0.begin(v, context)
     }
 }
@@ -103,7 +103,7 @@ impl<A: Serialize> Serialize for (A,) {
 macro_rules! tuple {
     ($(<$($n:ident $i:tt),*>),*) => { $(
         impl<$($n: Serialize,)*> Serialize for ($($n,)*) {
-            fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+            fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
                 v.seq()
                 $(.element(&self.$i, context))*
                 .done()
@@ -124,7 +124,7 @@ tuple!(
 );
 
 impl<T: Serialize> Serialize for [T] {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         let mut seq = v.seq();
         for e in self {
             seq = seq.element(e, context);
@@ -134,7 +134,7 @@ impl<T: Serialize> Serialize for [T] {
 }
 
 impl<T: Serialize> Serialize for Vec<T> {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         self.as_slice().begin(v, context)
     }
 }
@@ -145,7 +145,7 @@ where
     V: Serialize,
     H: BuildHasher,
 {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         let mut map = v.map();
         for (k, e) in self {
             map = map.field(&k.to_string(), e, context);
@@ -155,7 +155,7 @@ where
 }
 
 impl<K: ToString, V: Serialize> Serialize for BTreeMap<K, V> {
-    fn begin(&self, v: Visitor, context: &dyn Context) -> Done {
+    fn begin(&self, v: Visitor, context: &mut dyn Context) -> Done {
         let mut map = v.map();
         for (k, e) in self {
             map = map.field(&k.to_string(), e, context);

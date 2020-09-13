@@ -31,7 +31,7 @@ fn cmp(c: &mut Criterion) {
             |b, _| {
                 b.iter_batched(
                     || input_struct(),
-                    |value| black_box(toctoc::json::to_string(&value, &())),
+                    |value| black_box(toctoc::json::to_string(&value, &mut ())),
                     BatchSize::NumIterations(LEN as u64),
                 )
             },
@@ -112,7 +112,7 @@ fn cmp(c: &mut Criterion) {
                     BatchSize::NumIterations(LEN as u64),
                 )
             },
-            vec![toctoc::bson::to_bin(&input_struct(), &())],
+            vec![toctoc::bson::to_bin(&input_struct(), &mut ())],
         )
         .throughput(|d| Throughput::Bytes(d.len() as u64))
         .warm_up_time(WARM_UP_TIME)

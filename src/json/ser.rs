@@ -17,11 +17,11 @@ use crate::ser::{Context, MapTrait, Return, SeqTrait, Serialize, SerializerTrait
 ///         message: "reminiscent of Serde".to_owned(),
 ///     };
 ///
-///     let j = json::to_string(&example, &());
+///     let j = json::to_string(&example, &mut ());
 ///     println!("{}", j);
 /// }
 /// ```
-pub fn to_string<T: Serialize>(value: &T, context: &dyn Context) -> String {
+pub fn to_string<T: Serialize>(value: &T, context: &mut dyn Context) -> String {
     let mut json = JsonSer::new();
     match json.serialize(value, context) {
         Return::Text(t) => t,
@@ -103,7 +103,7 @@ impl JsonSer {
 }
 
 impl SerializerTrait for JsonSer {
-    fn serialize(&mut self, s: &dyn Serialize, c: &dyn Context) -> Return {
+    fn serialize(&mut self, s: &dyn Serialize, c: &mut dyn Context) -> Return {
         s.begin(self.into(), c);
         let mut v = vec![];
         std::mem::swap(&mut self.out, &mut v);
@@ -170,7 +170,7 @@ impl VisitorTrait for JsonSer {
 }
 
 impl SeqTrait for JsonSer {
-    fn element(&mut self, s: &dyn Serialize, c: &dyn Context) {
+    fn element(&mut self, s: &dyn Serialize, c: &mut dyn Context) {
         s.begin(self.into(), c);
         self.push(b',');
     }
@@ -184,7 +184,7 @@ impl SeqTrait for JsonSer {
 }
 
 impl MapTrait for JsonSer {
-    fn field(&mut self, f: &str, s: &dyn Serialize, c: &dyn Context) {
+    fn field(&mut self, f: &str, s: &dyn Serialize, c: &mut dyn Context) {
         self.push(b'\"');
         self.push_str(f);
         self.push_str("\":");

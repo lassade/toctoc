@@ -74,7 +74,7 @@ fn derive_struct(input: &DeriveInput, fields: &Fields) -> DeriveResult<TokenStre
             use #crate_path as __crate;
 
             impl #impl_generics __crate::ser::Serialize for #ident #ty_generics #where_clause {
-                fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {
+                fn begin(&self, v: __crate::ser::Visitor, c: &mut dyn __crate::ser::Context) -> __crate::ser::Done {
                     #body
                 }
             }
@@ -152,7 +152,7 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
                         }
 
                         impl #inner_impl_generics __crate::ser::Serialize for __Inner #inner_ty_generics #inner_where_clause {
-                            fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {
+                            fn begin(&self, v: __crate::ser::Visitor, c: &mut dyn __crate::ser::Context) -> __crate::ser::Done {
                                 v.map()
                                 #(.field(#field_name, &*self.#field, c))*
                                 .done()
@@ -196,7 +196,7 @@ fn derive_enum(input: &DeriveInput, enumeration: &DataEnum) -> DeriveResult<Toke
             use #crate_path as __crate;
 
             impl #impl_generics __crate::ser::Serialize for #ident #ty_generics #where_clause {
-                fn begin(&self, v: __crate::ser::Visitor, c: &dyn __crate::ser::Context) -> __crate::ser::Done {
+                fn begin(&self, v: __crate::ser::Visitor, c: &mut dyn __crate::ser::Context) -> __crate::ser::Done {
                     match self {
                         #(#arm,)*
                         _ => v.null(),

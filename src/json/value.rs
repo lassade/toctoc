@@ -48,7 +48,7 @@ impl<'a> Default for Value<'a> {
 }
 
 impl<'a> Serialize for Value<'a> {
-    fn begin(&self, v: ser::Visitor, c: &dyn ser::Context) -> ser::Done {
+    fn begin(&self, v: ser::Visitor, c: &mut dyn ser::Context) -> ser::Done {
         match self {
             Value::Null => v.null(),
             Value::Bool(b) => v.boolean(*b),
@@ -210,7 +210,7 @@ mod tests {
         }
 
         for (val, json) in cases {
-            let actual = json::to_string(val, &());
+            let actual = json::to_string(val, &mut ());
             assert_eq!(json, &actual);
         }
     }

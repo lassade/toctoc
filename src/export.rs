@@ -16,8 +16,6 @@ mod help {
 pub enum Hint<'a> {
     /// Null or default asset or entity
     Null,
-    /// Stable index number
-    Number(u64),
     /// May contain: path, name, formatted guid or inlined json data
     Str(&'a str),
     /// May contain: guid or inlined bson data
@@ -32,13 +30,10 @@ pub enum AssetHandle<T> {
 }
 
 /// Asset handle with type information
-pub struct Asset {
-    pub handle: AssetHandle<u32>,
-    pub id: (std::any::TypeId, u32),
-}
+pub use bevy::asset::HandleId;
 
 /// Entity type, should be compatible with most ecs crates
-pub struct Entity(pub u64);
+pub use bevy::ecs::Entity;
 
 /// Hex conversion utility
 pub use bintext::hex;

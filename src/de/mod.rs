@@ -133,7 +133,7 @@
 mod impls;
 
 use crate::error::{Error, Result};
-use crate::export::{Asset, Entity, Hint};
+use crate::export::{Entity, HandleId, Hint};
 
 /// Trait for data structures that can be deserialized from a JSON string.
 ///
@@ -266,21 +266,16 @@ pub trait Map<'de> {
 }
 
 /// Trait that can resolves complex types based on some context.
-#[cfg(not(feature = "any-context"))]
 pub trait Context {
     fn entity(&mut self, e: Hint) -> Result<Entity> {
         let _ = e;
         Err(Error::not_expected("entity"))?
     }
 
-    fn asset(&mut self, a: Hint) -> Result<Asset> {
+    fn asset(&mut self, a: Hint) -> Result<HandleId> {
         let _ = a;
         Err(Error::not_expected("asset"))?
     }
 }
 
-#[cfg(not(feature = "any-context"))]
 impl Context for () {}
-
-#[cfg(feature = "any-context")]
-pub trait Context = std::any::Any;

@@ -34,7 +34,7 @@ use crate::error::{Error, Result};
 pub fn from_bin<'de, T: Deserialize<'de>>(b: &'de [u8], ctx: &mut dyn Context) -> Result<T> {
     let mut out = None;
     BsonDe::new(b).deserialize(T::begin(&mut out), ctx)?;
-    out.ok_or_else(Error::unknown)
+    Ok(out.ok_or_else(Error::unknown)?)
 }
 
 pub struct BsonDe<'de> {
@@ -100,9 +100,9 @@ impl<'de> BsonDe<'de> {
 
         // Document done and all input was consumed
         if self.read_u8()? != 0 {
-            Err(Error("root document not ended".to_string()))
+            Err(Error("root document not ended".to_string()))?
         } else if self.buffer.len() != 0 {
-            Err(err!("buffer has {} bytes left", self.buffer.len()))
+            Err(err!("buffer has {} bytes left", self.buffer.len()))?
         } else {
             Ok(())
         }
@@ -236,7 +236,7 @@ impl<'de> BsonDe<'de> {
                 "expected to read {} bytes but buffer only have {} left",
                 length,
                 self.buffer.len()
-            ))
+            ))?
         }
     }
 
@@ -303,6 +303,6 @@ impl<'a, 'de: 'de> Map<'de> for Stack<'a, 'de> {
 impl<'de> DeserializerTrait<'de> for BsonDe<'de> {
     fn deserialize(&mut self, v: &mut dyn Visitor<'de>, c: &mut dyn Context) -> Result<()> {
         self.begin(v, c)
-            .map_err(|e| e.append_line_and_column(0, self.index))
+        //.map_err(|e| e.append_line_and_column(0, self.index))
     }
 }

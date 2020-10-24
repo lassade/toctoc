@@ -28,7 +28,7 @@ pub fn from_str<'de, T: Deserialize<'de>>(json: &'de mut str, ctx: &mut dyn Cont
     let mut out = None;
     let mut de = JsonDe::new(json)?;
     de.visit(T::begin(&mut out), ctx)?;
-    out.ok_or_else(Error::unknown)
+    Ok(out.ok_or_else(Error::unknown)?)
 }
 
 pub struct JsonDe<'de> {

@@ -43,7 +43,6 @@
 //! }
 //! ```
 
-#![cfg_attr(feature = "any-context", feature(trait_alias))]
 #![doc(html_root_url = "https://docs.rs/toctoc/0.1.13")]
 #![allow(
     clippy::needless_doctest_main,
@@ -102,4 +101,9 @@ make_place!(Place);
 pub fn check_endianness() {
     compile_error!("`Bytes` are always assumed to be in little endian, this will break json hexadecimal strings;\
         bson strings and binary data doesn't support big endian");
+}
+
+mod bevy_impls;
+pub mod bevy {
+    pub use crate::bevy_impls::*;
 }

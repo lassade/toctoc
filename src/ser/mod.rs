@@ -63,7 +63,7 @@
 
 mod impls;
 
-use crate::export::{Asset, Entity};
+use crate::export::{Entity, HandleId};
 
 /// Trait for data structures that can be serialized to a JSON string.
 ///
@@ -288,21 +288,16 @@ pub trait MapTrait {
 
 /// Trait that can translate complex types based on some context
 /// into serializable fragments
-#[cfg(not(feature = "any-context"))]
 pub trait Context {
     fn entity(&self, e: Entity) -> &dyn Serialize {
         let _ = e;
         &()
     }
 
-    fn asset(&self, a: Asset) -> &dyn Serialize {
+    fn asset(&self, a: HandleId) -> &dyn Serialize {
         let _ = a;
         &()
     }
 }
 
-#[cfg(not(feature = "any-context"))]
 impl Context for () {}
-
-#[cfg(feature = "any-context")]
-pub trait Context = std::any::Any;

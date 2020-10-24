@@ -1,11 +1,11 @@
 [package]
-name = "toctoc"
+name = "bevy_toctoc"
 version = "0.1.13"
 authors = ["Felipe Jorge <felipe.jorge.pereira@gmail.com>"]
 license = "MIT OR Apache-2.0"
-description = "Data structure serialization library with several opposite design goals from Serde."
-repository = "https://github.com/dtolnay/toctoc"
-documentation = "https://docs.rs/toctoc"
+description = "Fork of toctoc (de)serialization for Bevy"
+repository = "https://github.com/lassade/bevy_toctoc"
+documentation = "https://docs.rs/bevy_toctoc"
 readme = "README.md"
 edition = "2018"
 
@@ -24,6 +24,9 @@ faster-utf8-validator = { git = "https://github.com/simd-lite/faster-utf8-valida
 anyhow = { version = "1.0", optional = true }
 ufmt = { version = "0.1.0", features = ["std"], optional = true }
 
+bevy = "0.2"
+uuid = "0.8"
+
 [dev-dependencies]
 criterion = "0.3"
 core_affinity = "0.5.10"
@@ -41,19 +44,13 @@ members = ["derive"]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
-default = ["simd", "ufmt1"]
+default = ["simd", "ufmt1", "error"]
 
 # SIMD deserialization (enabled by default)
 simd = ["simd-json"]
 
 # Uses the `ufmt` crate to format errors (enabled by default)
 ufmt1 = ["ufmt"]
-
-# Use ser and de `Context` as std::any::Any (requires nighlty)
-any-context = []
-
-# # Manipulates the stack to (de)serialize deeply nested structs
-# deeply-nested = []
 
 # Better errors when debuging
 error = ["anyhow"]

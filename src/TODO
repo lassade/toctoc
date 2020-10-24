@@ -1,0 +1,13 @@
+TODO
+
+- Pretty json (inline hint?)
+
+- Performance of ser/de
+  how to improve
+  no inlining makes the stack grow bigger? probably and also make the code a bit slow
+  how much does it save in space compared with nanoserde/serde/miniserde?
+
+- Comment the derive code as much as possible
+
+- Deep stack support deep-recursion
+  - Tests for both bson and json
